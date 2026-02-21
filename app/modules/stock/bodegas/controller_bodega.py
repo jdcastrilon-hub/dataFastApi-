@@ -18,8 +18,14 @@ def listar_bodegas(page: int = 0, size: int = 100, db: Session = Depends(get_db)
     """Obtiene la lista de todas las bodegas."""
     return repository_bodega.get_bodegas(db, skip=page, limit=size)
 
+@router.get("/listCombo", response_model=List[schema_bodega.BodegaCombo])
+def listar_bodegas(db: Session = Depends(get_db)):
+    """Obtiene la lista de todas las bodegas."""
+    return repository_bodega.get_bodegas_combo(db)
+
+
 @router.get("/pagination", response_model=schema_bodega.PaginatedBodegaResponse)
-def list_bodegas(  
+def list_bodegas_paginacion(  
     page: int = Query(0, ge=0),
     size: int = Query(10, ge=1),
     db: Session = Depends(get_db)):
@@ -55,14 +61,27 @@ def crear_bodega(bodega: schema_bodega.BodegaCreate, db: Session = Depends(get_d
             }
         )
 
-@router.put("/edit", response_model=schema_bodega.BodegaResponse)
+@router.put("/edit")
 def actualizar_bodega(bodega_id: int, bodega: schema_bodega.BodegaCreate, db: Session = Depends(get_db)):
     """Actualiza los datos de una bodega existente."""
-    db_bodega = repository_bodega.update_bodega(db, bodega_id=bodega_id, bodega_data=bodega)
-    if db_bodega is None:
-        raise HTTPException(status_code=404, detail="Bodega no encontrada")
-    return db_bodega
-
+    try:
+        repository_bodega.update_bodega(db, bodega_id=bodega_id, bodega_data=bodega)
+        return {
+                "status": "success",
+                "message": "Bodega editada exitosamente",
+                "data": None  # Omites el objeto completo para ahorrar recursos
+        }
+    except Exception as e:
+            # Aquí devuelves un error controlado, por ejemplo 400 (Bad Request)
+        return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={
+                    "status": "error",
+                    "message": f"Error al guardar: {str(e)}",
+                    "data": None
+                }
+        )
+    
 @router.delete("/delete", status_code=status.HTTP_204_NO_CONTENT)
 def eliminar_bodega(bodega_id: int, db: Session = Depends(get_db)):
     """Elimina una bodega del sistema."""

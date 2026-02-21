@@ -1,0 +1,49 @@
+from sqlalchemy import Column, Integer, String, JSON, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+from app.database import Base
+
+class Articulo(Base):
+    __tablename__ = "m_articulos"
+    __table_args__ = {'schema': 'public'}
+
+    # Llave primaria y campos básicos
+    id_articulo = Column(Integer, primary_key=True, index=True)
+    cod_articulo = Column(String(30), nullable=False)
+    nom_articulo = Column(String(100), nullable=False)
+    tipo_producto = Column(String(2), nullable=False)
+    
+    # Llaves foráneas (Relaciones)
+    id_negocio = Column(Integer, ForeignKey("public.m_negocios.id"), nullable=False)
+    id_categoria = Column(Integer, nullable=False) # Si no tienes m_categorias.id como FK formal, queda así
+    id_subcategoria = Column(Integer, ForeignKey("public.m_subcategorias.id"), nullable=False)
+    id_unidad = Column(Integer, ForeignKey("public.m_unidades.id"), nullable=False)
+    id_costeo = Column(Integer, ForeignKey("public.m_costeo.id"), nullable=False)
+    id_impuesto = Column(Integer, ForeignKey("public.m_impuesto.id"), nullable=True)
+    id_ref = Column(Integer, nullable=True)
+
+    # Configuración de Stock
+    activo_stock = Column(String(2), nullable=False)
+    stock_min = Column(Integer, nullable=True)
+    stock_max = Column(Integer, nullable=True)
+
+    # Configuración Comercial y Contable
+    activo_comercial = Column(String(2), nullable=False)
+    grupo_contable = Column(String(20), nullable=False)
+    cta_inventario = Column(String(15), nullable=True)
+
+    # Auditoría
+    fecha_mod = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
+    logs = Column(JSON, nullable=True)
+
+    #Relaciones FK
+    negocio = relationship("Negocio", back_populates="negocio")
+    subcategoria = relationship("Subcategoria", back_populates="articulos")
+    unidad = relationship("Unidad", back_populates="articulos") 
+    costeo = relationship("Costeo", back_populates="articulos") 
+    impuesto = relationship("Impuesto", back_populates="articulos") 
+
+
+    #ToString
+    def __repr__(self):
+        return f"<Articulo(nom='{self.nom_articulo}', cod='{self.cod_articulo}')>"
