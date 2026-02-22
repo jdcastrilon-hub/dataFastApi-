@@ -6,6 +6,10 @@ from . import model_bodega, schema_bodega
 def get_bodegas(db: Session, skip: int = 0, limit: int = 100):
     return db.query(model_bodega.Bodega).order_by(desc(model_bodega.Bodega.fecha_mod)).offset(skip).limit(limit).all()
 
+# Obtener todas las bodegas 
+def get_bodegas_combo(db: Session):
+    return db.query(model_bodega.Bodega).all()
+
 # Obtener una bodega por ID
 def get_bodega(db: Session, bodega_id: int):
     return db.query(model_bodega.Bodega).filter(model_bodega.Bodega.id == bodega_id).first()

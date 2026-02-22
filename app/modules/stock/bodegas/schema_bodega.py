@@ -2,6 +2,7 @@ from pydantic import BaseModel, ConfigDict, Field, Json
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
+#Esquema para leer la varaiable Logs
 class LogEntry(BaseModel):
     operacion: str
     usuario_mod: str
@@ -47,6 +48,20 @@ class PaginatedBodegaResponse(BaseModel):
     totalPages: int
     number: int
     size: int
+
+# Esquema para combos en la pagina Web
+class BodegaCombo(BaseModel):
+    id: int
+    cod_bodega: str = Field(alias="codBodega", max_length=20)
+    nom_bodega: str = Field(alias="nomBodega", max_length=80)   
+    tiene_ubicaciones: str = Field(alias="manejaUbicaciones", max_length=2)
+    
+
+    model_config = ConfigDict(
+        from_attributes=True,  
+        populate_by_name=True   
+    )
+
     
 # Esquema para crear (lo que recibe el POST)
 class BodegaCreate(BodegaBase):
