@@ -81,6 +81,14 @@ class Unidad(BaseModel):
         populate_by_name=True
     )
 
+class ArticuloSearch(BaseModel):
+    id_articulo: int = Field(alias="idArticulo") 
+    cod_articulo: str = Field(alias="codArticulo", max_length=20)
+    nom_articulo: str = Field(alias="nomArticulo", max_length=80)
+
+    class Config:
+        from_attributes = True
+
 # Esquema para crear (lo que recibe el POST)
 class ArticuloCreate(ArticulosBase):
     pass

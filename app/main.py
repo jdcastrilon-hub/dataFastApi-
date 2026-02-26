@@ -6,6 +6,9 @@ from app.modules.stock.categorias.controller_categoria import router as categori
 from app.modules.stock.articulos.controller_articulos import router as articulos
 from app.modules.stock.unidades.controller_unidad import router as unidades
 from app.modules.stock.costeo.controller_costeo import router as costeo
+from app.modules.stock.motivosStock.controller_motivoajuste import router as motivos
+from app.modules.stock.ajusteStock.controller_ajusteStock import router as ajustestock
+from app.modules.stock.estados.controller_estado import router as estados
 from app.modules.core.empresas.controller_empresa import router as empresas
 from app.modules.core.negocios.controller_negocio import router as negocios
 from app.modules.impuestos.impuesto.controller_impuesto import router as impuestos
@@ -46,3 +49,6 @@ app.include_router(unidades)
 app.include_router(costeo)
 app.include_router(impuestos)
 app.include_router(serviciosini)
+app.include_router(motivos)
+app.include_router(estados)
+app.include_router(ajustestock)

@@ -19,6 +19,12 @@ def listar_empresas( db: Session = Depends(get_db)):
     """Obtiene la lista de todas los articulos."""
     return repository_articulos.get_articulosCompleto(db)
 
+@router.get("/search", response_model=List[schema_articulos.ArticuloSearch])
+def search_articulos(
+    query: str, 
+    db: Session = Depends(get_db)):
+    return repository_articulos.find_articulos_by_query(db,query)
+
 @router.post("/save")
 def save_articulo(articulo: schema_articulos.ArticuloCreate, db: Session = Depends(get_db)):
     """Crea una nueva bodega y retorna el objeto con su ID generado."""

@@ -1,11 +1,11 @@
-from sqlalchemy import Column, Integer, String, BigInteger, Date, DateTime, JSON, ForeignKey
+from sqlalchemy import Column, Integer, Sequence, String, BigInteger, Date, DateTime, JSON, ForeignKey
 from sqlalchemy.orm import relationship
 from app.database import Base
 
 class AjusteStock(Base):
     __tablename__ = "t_ajustestock"
 
-    id_trans = Column(BigInteger, primary_key=True, index=True)
+    id_trans = Column(BigInteger,Sequence('id_transaccion'), primary_key=True, index=True)
     id_bodega = Column(Integer, nullable=False)
     documento = Column(String(10), nullable=False)
     nro_docum = Column(Integer, nullable=False)

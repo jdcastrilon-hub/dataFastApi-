@@ -1,4 +1,4 @@
-from sqlalchemy import desc
+from sqlalchemy import desc, text
 from sqlalchemy.orm import Session
 from . import model_bodega, schema_bodega
 
@@ -64,3 +64,26 @@ def get_bodegas_paginated(db: Session, page: int, size: int):
         "number": page,
         "size": size
     }
+
+def get_stock_disponible(db: Session, id_articulo: int, id_bodega: int, id_estado: int):
+        # Definimos el query nativo llamando a la función
+        query = text("""
+            SELECT 
+                s.id AS "idArticulo", 
+                s.codigo_articulo AS "codArticulo", 
+                s.nombre_articulo AS "nomArticulo", 
+                s.ubicacion AS "ubicacion", 
+                s.lote AS "lote", 
+                s.stock AS "stock"
+            FROM stockdisponiblexBodega(:idArticulo, :idBodega, :idEstado) AS s
+        """)
+        
+        # Ejecutamos con los parámetros
+        result = db.execute(query, {
+            "idArticulo": id_articulo,
+            "idBodega": id_bodega,
+            "idEstado": id_estado
+        })
+        
+        # Convertimos los resultados a diccionarios para que Pydantic los valide
+        return result.mappings().all()

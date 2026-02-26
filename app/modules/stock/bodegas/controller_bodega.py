@@ -89,3 +89,12 @@ def eliminar_bodega(bodega_id: int, db: Session = Depends(get_db)):
     if not success:
         raise HTTPException(status_code=404, detail="Bodega no encontrada")
     return None
+
+@router.get("/stockDisponiblexBodega", response_model=List[schema_bodega.StockDisponibleResponse])
+def get_stock_disponible(
+    idArticulo: int ,
+    idBodega: int ,
+    idEstado: int ,
+    db: Session = Depends(get_db)
+):
+    return repository_bodega.get_stock_disponible(db,idArticulo, idBodega, idEstado)

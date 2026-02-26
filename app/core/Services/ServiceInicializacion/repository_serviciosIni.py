@@ -12,3 +12,12 @@ def NumeradorNext(db: Session,numerador : str):
     
     return db.execute(query, {"numerador": numerador}).mappings().first()
    
+
+def NumeradorNextReal(db: Session,numerador : str):
+    # Consulta nativa adaptada a SQLAlchemy
+    query = text("""
+       SELECT nextval(:numerador) AS next_value
+    """)
+    
+    return db.execute(query, {"numerador": numerador}).mappings().first().get("next_value")
+   
