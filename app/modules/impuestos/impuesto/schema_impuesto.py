@@ -22,3 +22,16 @@ class ImpuestoBase(BaseModel):
         from_attributes=True,  
         populate_by_name=True   
     )
+
+# Esquema para combos en la pagina Web
+class ImpuestoCombo(BaseModel):
+    id: int
+    tasa_impu: str = Field(alias="tasaImpuesto", max_length=10)
+    porc_tasa: Decimal = Field(alias="porcentaje")
+    nombre_tasa: str = Field(alias="descripcion", max_length=50)
+
+    model_config = ConfigDict(
+        from_attributes=True,  
+        populate_by_name=True   
+    )
+

@@ -13,3 +13,8 @@ router = APIRouter(
 def lista_tasas(db: Session = Depends(get_db)):
     """Obtiene la lista de todas los impuestos."""
     return repository_impuesto.get_impuestos(db)
+
+@router.get("/listCombo", response_model=List[schema_impuesto.ImpuestoCombo])
+def listar_tasas_combo(db: Session = Depends(get_db)):
+    """Obtiene la lista de todas las bodegas."""
+    return repository_impuesto.get_impuestos(db)

@@ -11,7 +11,12 @@ from app.modules.stock.ajusteStock.controller_ajusteStock import router as ajust
 from app.modules.stock.estados.controller_estado import router as estados
 from app.modules.core.empresas.controller_empresa import router as empresas
 from app.modules.core.negocios.controller_negocio import router as negocios
+from app.modules.core.ciudades.controller_ciudades import router as ciudad
 from app.modules.impuestos.impuesto.controller_impuesto import router as impuestos
+from app.modules.compras.documentos.controller_documentos import router as tipodoc
+from app.modules.compras.personas.controller_personas import router as persona
+from app.modules.compras.proveedores.controller_proveedor import router as provedor
+from app.modules.compras.compradirecta.controller_compras import router as compra
 from app.core.Services.ServiceInicializacion.controller_serviciosIni import router as serviciosini
 from fastapi.middleware.cors import CORSMiddleware
  
@@ -52,3 +57,8 @@ app.include_router(serviciosini)
 app.include_router(motivos)
 app.include_router(estados)
 app.include_router(ajustestock)
+app.include_router(tipodoc)
+app.include_router(persona)
+app.include_router(ciudad)
+app.include_router(provedor)
+app.include_router(compra)

@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, JSON, DateTime, ForeignKey, UniqueConstraint
+from sqlalchemy.orm import relationship
 from app.database import Base
 from sqlalchemy.sql import func
 
@@ -6,7 +7,7 @@ class Bodega(Base):
     __tablename__ = "m_bodegas"
 
     id = Column(Integer, primary_key=True, index=True)
-    id_sucursal = Column(Integer,  nullable=False) 
+    id_sucursal = Column(Integer,ForeignKey("public.m_sucursales.id"),  nullable=False) 
     cod_bodega = Column(String(20), nullable=False)
     nom_bodega = Column(String(80), nullable=False)
     principal = Column(String(2), nullable=False)
@@ -14,6 +15,9 @@ class Bodega(Base):
     activo = Column(String(2), nullable=False)
     logs = Column(JSON, nullable=True)
     fecha_mod = Column(DateTime, onupdate=func.now(), nullable=True)
+
+    #Relaciones
+    sucursal = relationship("Sucursal", back_populates="bodegas")
 
     # Definimos la restricción UNIQUE que tienes en el SQL
     __table_args__ = (

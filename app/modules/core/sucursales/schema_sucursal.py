@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional, List, Any
 from datetime import datetime
+from app.modules.stock.bodegas import schema_bodega
 
 class SucursalBase(BaseModel):
     id_emp: int = Field(alias="idEmpresa")
@@ -22,6 +23,19 @@ class SucursalListCombo(BaseModel):
     id: int = Field(alias="id")
     cod_sucursal: str  = Field(alias="codSucursal")
     nom_sucursal: str = Field(alias="nomSucursal")
+
+    model_config = ConfigDict(
+        from_attributes=True,  
+        populate_by_name=True   
+    )
+
+ #Lista Para combos
+class SucursalListComboByBodegas(BaseModel):
+    id: int = Field(alias="id")
+    id_emp: int = Field(alias="idEmpresa")
+    cod_sucursal: str  = Field(alias="codSucursal")
+    nom_sucursal: str = Field(alias="nomSucursal")
+    list_bodegas: List[schema_bodega.BodegaCombo]
 
     model_config = ConfigDict(
         from_attributes=True,  

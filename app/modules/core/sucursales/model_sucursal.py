@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, JSON, DateTime, ForeignKey, UniqueConstraint
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
 
@@ -19,3 +20,6 @@ class Sucursal(Base):
     activo = Column(String(2), nullable=False, default="SI")
     logs = Column(JSON)
     fecha_mod = Column(DateTime, onupdate=func.now())
+
+    #relaciones
+    bodegas = relationship("Bodega", back_populates="sucursal")
