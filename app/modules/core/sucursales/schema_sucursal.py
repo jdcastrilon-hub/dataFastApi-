@@ -35,7 +35,10 @@ class SucursalListComboByBodegas(BaseModel):
     id_emp: int = Field(alias="idEmpresa")
     cod_sucursal: str  = Field(alias="codSucursal")
     nom_sucursal: str = Field(alias="nomSucursal")
-    list_bodegas: List[schema_bodega.BodegaCombo]
+    list_bodegas: List[schema_bodega.BodegaCombo] = Field(
+        alias="list_bodegas", 
+        validation_alias="bodegas" 
+    )
 
     model_config = ConfigDict(
         from_attributes=True,  

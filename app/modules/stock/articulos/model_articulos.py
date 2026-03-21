@@ -42,8 +42,25 @@ class Articulo(Base):
     unidad = relationship("Unidad", back_populates="articulos") 
     costeo = relationship("Costeo", back_populates="articulos") 
     impuesto = relationship("Impuesto", back_populates="articulos") 
+    codigosBarra = relationship("CodigosBarra", back_populates="articulo")
 
 
     #ToString
     def __repr__(self):
         return f"<Articulo(nom='{self.nom_articulo}', cod='{self.cod_articulo}')>"
+    
+
+class CodigosBarra(Base): 
+    __tablename__ = "m_artxcodigobarra"
+    __table_args__ = {'schema': 'public'}
+
+    # Definimos los campos que forman la clave primaria compuesta
+    id_codbarra = Column(Integer,primary_key=True,index=True)
+    id_articulo = Column(Integer,ForeignKey("public.m_articulos.id_articulo"),primary_key=True,nullable=False)    
+    
+    # Otros campos
+    cod_barra = Column(String(50), nullable=True)
+    ref_barra = Column(String(100), nullable=True)
+
+    # Opcional: Si quieres tener la relación hacia el objeto Articulo
+    articulo = relationship("Articulo", back_populates="codigosBarra")

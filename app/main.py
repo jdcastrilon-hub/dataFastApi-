@@ -9,6 +9,8 @@ from app.modules.stock.costeo.controller_costeo import router as costeo
 from app.modules.stock.motivosStock.controller_motivoajuste import router as motivos
 from app.modules.stock.ajusteStock.controller_ajusteStock import router as ajustestock
 from app.modules.stock.estados.controller_estado import router as estados
+from app.modules.stock.trasladostock.controller_trasladoStock import router as traslado
+from app.modules.stock.reporteInventario.controller_reporteinventario import router as reporteinventario
 from app.modules.core.empresas.controller_empresa import router as empresas
 from app.modules.core.negocios.controller_negocio import router as negocios
 from app.modules.core.ciudades.controller_ciudades import router as ciudad
@@ -62,3 +64,5 @@ app.include_router(persona)
 app.include_router(ciudad)
 app.include_router(provedor)
 app.include_router(compra)
+app.include_router(traslado)
+app.include_router(reporteinventario)

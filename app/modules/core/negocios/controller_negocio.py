@@ -19,3 +19,5 @@ def listar_negocios_y_categorias(id_empresa: int,db: Session = Depends(get_db)):
         return []
         
     return data
+
+    

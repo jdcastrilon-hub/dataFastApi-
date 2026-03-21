@@ -27,6 +27,7 @@ class Empresa(Base):
     # Relacion de Negocio -> Empresa
     negocios = relationship("Negocio", back_populates="empresa")
     proveedores = relationship("Compra", back_populates="empresa")
+    sucursales = relationship("Sucursal", back_populates="empresa")
 
     #ToString
     def __repr__(self):

@@ -62,4 +62,4 @@ def get_bodegas_paginated(db: Session, page: int, size: int):
         "totalPages": total_pages,
         "number": page,
         "size": size
-    }
+    } 

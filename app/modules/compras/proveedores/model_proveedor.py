@@ -19,4 +19,5 @@ class Proveedor(Base):
 
     # Relación para obtener datos de la persona asociada
     persona = relationship("Persona", back_populates="proveedor")
-    compras = relationship("Compra", back_populates="proveedor")
+    compras = relationship("Compra", back_populates="proveedor")  
+ 

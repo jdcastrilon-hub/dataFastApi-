@@ -3,32 +3,23 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
-from . import repository_compras, schema_compras
+from . import repository_trasladoStock, schema_trasladoStock
 from app.core.Services.ServiceInicializacion import repository_serviciosIni
 
 router = APIRouter(
-    prefix="/compras/compradirecta",
-    tags=["Compras - Proveedor"])
-
-@router.get("/pagination", response_model=schema_compras.PaginatedCompraResponse)
-def list_bodegas_paginacion(  
-    page: int = Query(0, ge=0),
-    size: int = Query(10, ge=1),
-    idempresa : int =0,
-    db: Session = Depends(get_db)):
-    return repository_compras.get_compras_paginated(db, page, size,idempresa)
-
+    prefix="/bodega/trasladobodega",
+    tags=["Stock - Traslado"])
 
 @router.post("/save")
-def crear_compra(compra: schema_compras.CompraCreate, db: Session = Depends(get_db)):
-    """Crea una nueva compra y retorna el objeto con su ID generado."""
+def crear_ajuste(traslado: schema_trasladoStock.TrasladoStockCreate, db: Session = Depends(get_db)):
+    """Crea una nueva bodega y retorna el objeto con su ID generado."""
     try:
-        result=repository_serviciosIni.NumeradorNextReal(db,"id_nrodocum_compra")
+        result=repository_serviciosIni.NumeradorNextReal(db,"id_nrodocum_trasladobodega")
         print(result)
-        repository_compras.create_compra(db=db, obj=compra,nro_docum=result)
+        repository_trasladoStock.create_ajustestock(db=db, obj=traslado, nro_docum=result)
         return {
             "status": "success",
-            "message": "ajuste creada exitosamente",
+            "message": "traslado creado exitosamente",
             "data": None  # Omites el objeto completo para ahorrar recursos
         }
     except Exception as e:

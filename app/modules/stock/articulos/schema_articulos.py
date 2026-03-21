@@ -28,7 +28,19 @@ class ArticulosBase(BaseModel):
     grupo_contable: str = Field(alias="grupoContable", max_length=20)
     cta_inventario: Optional[str]  = Field(alias="cuentaInventario", max_length=15)
     fecha_mod: Optional[datetime] = Field(alias="fechaMod",default=None)
+    codigosBarra: List[CodigoBarraBase]
     logs: List[LogEntry]
+
+    model_config = ConfigDict(
+        from_attributes=True,  
+        populate_by_name=True   
+    )
+
+class CodigoBarraBase(BaseModel):
+    id_codbarra: Optional[int] = Field(None,alias="id") 
+    id_articulo: Optional[int] = Field(None,alias="idArticulo") 
+    cod_barra: str = Field(alias="codBarra", max_length=50)
+    ref_barra: str = Field(alias="nomBarra", max_length=100)
 
     model_config = ConfigDict(
         from_attributes=True,  
@@ -81,10 +93,27 @@ class Unidad(BaseModel):
         populate_by_name=True
     )
 
-class ArticuloSearch(BaseModel):
+class ArticuloSearchCodigoBarra(BaseModel):
+    id_articulo: int = Field(alias="idArticulo") 
+    id_codbarra: int = Field(alias="idCodBarra") 
+    cod_articulo: str = Field(alias="codArticulo", max_length=20)
+    nom_articulo: str = Field(alias="nomArticulo", max_length=80)
+
+    class Config:
+        from_attributes = True
+
+class ArticuloSearchCodigoStock(BaseModel):
     id_articulo: int = Field(alias="idArticulo") 
     cod_articulo: str = Field(alias="codArticulo", max_length=20)
     nom_articulo: str = Field(alias="nomArticulo", max_length=80)
+
+    class Config:
+        from_attributes = True
+
+class GeneracionCodigoBarra(BaseModel):        
+    id_articulo: int = Field(alias="idArticulo") 
+    id_codbarra: int = Field(alias="idCodBarra")     
+    existe : bool = Field(alias="existe")  
 
     class Config:
         from_attributes = True

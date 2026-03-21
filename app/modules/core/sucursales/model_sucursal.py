@@ -11,7 +11,7 @@ class Sucursal(Base):
     )
 
     id = Column(Integer, primary_key=True, index=True)
-    id_emp = Column(Integer, nullable=False)
+    id_emp = Column(Integer,ForeignKey("public.m_empresa.id_emp"), nullable=False)
     cod_sucursal = Column(String(20), nullable=False)
     nom_sucursal = Column(String(80), nullable=False)
     id_ciudad = Column(Integer, nullable=False)
@@ -23,3 +23,5 @@ class Sucursal(Base):
 
     #relaciones
     bodegas = relationship("Bodega", back_populates="sucursal")
+
+    empresa =relationship("Empresa", back_populates="sucursales")

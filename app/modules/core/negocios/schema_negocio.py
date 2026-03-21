@@ -31,8 +31,15 @@ class SubcategoriaSchema(BaseModel):
         from_attributes=True,  
         populate_by_name=True
     )
-
-
-
-
 #Interfaz (NegocioxCategoriasDTO)------------------------------
+
+
+class NegocioCombo(BaseModel):
+    id: Optional[int] = Field(alias="idNegocio")
+    cod_negocio:  str = Field(alias="Codnegocio", max_length=20)
+    nom_negocio: str = Field(alias="NomNegocio", max_length=50)
+
+    model_config = ConfigDict(
+        from_attributes=True,  
+        populate_by_name=True
+    )

@@ -19,11 +19,23 @@ def listar_empresas( db: Session = Depends(get_db)):
     """Obtiene la lista de todas los articulos."""
     return repository_articulos.get_articulosCompleto(db)
 
-@router.get("/search", response_model=List[schema_articulos.ArticuloSearch])
+@router.get("/searchCodigoBarra", response_model=List[schema_articulos.ArticuloSearchCodigoBarra])
+def search_articulos(
+    query: str, 
+    db: Session = Depends(get_db)):
+    return repository_articulos.find_codigoBarra_by_query(db,query)
+
+@router.get("/searchCodigoStock", response_model=List[schema_articulos.ArticuloSearchCodigoStock])
 def search_articulos(
     query: str, 
     db: Session = Depends(get_db)):
     return repository_articulos.find_articulos_by_query(db,query)
+
+#Validar si existe un codigo de barra para un articulo
+@router.get("/searchArticuloByCodigoBarra", response_model=schema_articulos.GeneracionCodigoBarra)
+def existe_barra(id_articulo: int, cod_barra: str, db: Session = Depends(get_db)):
+    existe = repository_articulos.check_exists_cod_barra(db, id_articulo, cod_barra)
+    return repository_articulos.generacion_codigobarra(db,id_articulo,cod_barra)
 
 @router.post("/save")
 def save_articulo(articulo: schema_articulos.ArticuloCreate, db: Session = Depends(get_db)):

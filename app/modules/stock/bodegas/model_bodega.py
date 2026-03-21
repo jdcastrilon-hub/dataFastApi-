@@ -5,6 +5,7 @@ from sqlalchemy.sql import func
 
 class Bodega(Base):
     __tablename__ = "m_bodegas"
+    __table_args__ = {"schema": "public"}
 
     id = Column(Integer, primary_key=True, index=True)
     id_sucursal = Column(Integer,ForeignKey("public.m_sucursales.id"),  nullable=False) 
@@ -18,6 +19,11 @@ class Bodega(Base):
 
     #Relaciones
     sucursal = relationship("Sucursal", back_populates="bodegas")
+    compras = relationship(
+        "Compra", 
+        back_populates="bodega",
+        primaryjoin="Bodega.id == Compra.id_bodega"
+    )
 
     # Definimos la restricción UNIQUE que tienes en el SQL
     __table_args__ = (
