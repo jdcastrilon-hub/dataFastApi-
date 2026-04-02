@@ -26,6 +26,8 @@ class Impuesto(Base):
     # Relación hacia Artículos 
     # (Un tipo de costeo puede aplicarse a muchos artículos)
     articulos = relationship("Articulo", back_populates="impuesto")
+    # Referencia para compras
+    compras = relationship("DetalleCompra", back_populates="detalleimpuesto1")
 
     def __repr__(self):
         return f"<MImpuesto(id={self.id}, nombre='{self.nombre_tasa}')>"

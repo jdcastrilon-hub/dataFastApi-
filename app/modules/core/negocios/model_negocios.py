@@ -23,7 +23,7 @@ class Negocio(Base):
     empresa = relationship("Empresa", back_populates="negocios")
 
     # Relacion de Negocio -> Empresa
-    negocio = relationship("Articulo", back_populates="negocio")
+    articulo = relationship("Articulo", back_populates="objnegocio")
     
     # Relación hacia los artículos (Hijos)
     # Esto permitirá que desde el negocio puedas ver sus artículos si lo necesitas

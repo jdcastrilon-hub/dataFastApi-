@@ -11,6 +11,7 @@ from app.modules.stock.ajusteStock.controller_ajusteStock import router as ajust
 from app.modules.stock.estados.controller_estado import router as estados
 from app.modules.stock.trasladostock.controller_trasladoStock import router as traslado
 from app.modules.stock.reporteInventario.controller_reporteinventario import router as reporteinventario
+from app.modules.stock.tiposervicio.controller_servicios import router as tiposervicio
 from app.modules.core.empresas.controller_empresa import router as empresas
 from app.modules.core.negocios.controller_negocio import router as negocios
 from app.modules.core.ciudades.controller_ciudades import router as ciudad
@@ -19,6 +20,7 @@ from app.modules.compras.documentos.controller_documentos import router as tipod
 from app.modules.compras.personas.controller_personas import router as persona
 from app.modules.compras.proveedores.controller_proveedor import router as provedor
 from app.modules.compras.compradirecta.controller_compras import router as compra
+from app.modules.compras.monitorcompras.controller_monitor import router as monitorcompras
 from app.core.Services.ServiceInicializacion.controller_serviciosIni import router as serviciosini
 from fastapi.middleware.cors import CORSMiddleware
  
@@ -66,3 +68,5 @@ app.include_router(provedor)
 app.include_router(compra)
 app.include_router(traslado)
 app.include_router(reporteinventario)
+app.include_router(monitorcompras)
+app.include_router(tiposervicio)

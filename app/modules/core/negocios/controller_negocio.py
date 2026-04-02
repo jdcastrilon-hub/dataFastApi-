@@ -9,7 +9,7 @@ router = APIRouter(
     prefix="/core/negocios",
     tags=["Core - Empresas"])
 
-@router.get("/listByNegocios", response_model=List[schema_negocio.NegocioxCategoriasDTO])
+@router.get("/listByNegocios", response_model=schema_negocio.NegocioxCategoriasDTO)
 def listar_negocios_y_categorias(id_empresa: int,db: Session = Depends(get_db)):
 
     data = repository_negocios.get_negocios_con_categorias_por_empresa(db,id_empresa)

@@ -19,9 +19,5 @@ class Costeo(Base):
     # func.now() se encarga de la fecha actual al crear y actualizar
     fecha_mod = Column(DateTime, default=func.now(), onupdate=func.now())
 
-    # Relación hacia Artículos 
-    # (Un tipo de costeo puede aplicarse a muchos artículos)
-    articulos = relationship("Articulo", back_populates="costeo")
-
     def __repr__(self):
         return f"<Costeo(tipo='{self.tipo_costeo}', nombre='{self.nombre_costeo}')>"

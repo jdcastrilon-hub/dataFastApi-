@@ -11,14 +11,13 @@ class Articulo(Base):
     id_articulo = Column(Integer, primary_key=True, index=True)
     cod_articulo = Column(String(30), nullable=False)
     nom_articulo = Column(String(100), nullable=False)
-    tipo_producto = Column(String(2), nullable=False)
     
     # Llaves foráneas (Relaciones)
     id_negocio = Column(Integer, ForeignKey("public.m_negocios.id"), nullable=False)
     id_categoria = Column(Integer, nullable=False) # Si no tienes m_categorias.id como FK formal, queda así
     id_subcategoria = Column(Integer, ForeignKey("public.m_subcategorias.id"), nullable=False)
     id_unidad = Column(Integer, ForeignKey("public.m_unidades.id"), nullable=False)
-    id_costeo = Column(Integer, ForeignKey("public.m_costeo.id"), nullable=False)
+    id_tiposervicio = Column(Integer, ForeignKey("public.m_tiposervicio.id"), nullable=False)
     id_impuesto = Column(Integer, ForeignKey("public.m_impuesto.id"), nullable=True)
     id_ref = Column(Integer, nullable=True)
 
@@ -37,10 +36,9 @@ class Articulo(Base):
     logs = Column(JSON, nullable=True)
 
     #Relaciones FK
-    negocio = relationship("Negocio", back_populates="negocio")
+    objnegocio = relationship("Negocio", back_populates="articulo")
     subcategoria = relationship("Subcategoria", back_populates="articulos")
     unidad = relationship("Unidad", back_populates="articulos") 
-    costeo = relationship("Costeo", back_populates="articulos") 
     impuesto = relationship("Impuesto", back_populates="articulos") 
     codigosBarra = relationship("CodigosBarra", back_populates="articulo")
 
@@ -62,5 +60,8 @@ class CodigosBarra(Base):
     cod_barra = Column(String(50), nullable=True)
     ref_barra = Column(String(100), nullable=True)
 
-    # Opcional: Si quieres tener la relación hacia el objeto Articulo
+    # Referecia para articulo
     articulo = relationship("Articulo", back_populates="codigosBarra")
+    # Referencia para compras
+    compras = relationship("DetalleCompra", back_populates="articulo")
+

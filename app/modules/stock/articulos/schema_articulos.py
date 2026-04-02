@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field, Json
+from pydantic import BaseModel, ConfigDict, Field, Json, model_validator
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
@@ -9,16 +9,15 @@ class LogEntry(BaseModel):
     fecha_mod: str
 
 # Esquema Lista
-class ArticulosBase(BaseModel):
+class ArticulosBase(BaseModel): 
     id_articulo: Optional[int] = Field(alias="id_articulo") 
     cod_articulo: str = Field(alias="codArticulo", max_length=30)
-    nom_articulo: str = Field(alias="nomArticulo", max_length=100)
-    tipo_producto: str = Field(alias="TipoProducto", max_length=2)
+    nom_articulo: str = Field(alias="nomArticulo", max_length=100)    
     id_negocio: int = Field(alias="idNegocio") 
     id_categoria: int = Field(alias="idCategoria") 
     id_subcategoria: int = Field(alias="idsubCategoria") 
     id_unidad: int = Field(alias="idunidad") 
-    id_costeo: int = Field(alias="idCosteo") 
+    id_tiposervicio: int = Field(alias="idTipoService") 
     id_impuesto: int = Field(alias="idImpuesto") 
     id_ref: int = Field(alias="idRef")     
     activo_stock: str = Field(alias="activoStock", max_length=2)
@@ -30,6 +29,7 @@ class ArticulosBase(BaseModel):
     fecha_mod: Optional[datetime] = Field(alias="fechaMod",default=None)
     codigosBarra: List[CodigoBarraBase]
     logs: List[LogEntry]
+    objnegocio: Optional[Negocio] = None # Aplicar para recuperar informacion del articulo
 
     model_config = ConfigDict(
         from_attributes=True,  
@@ -46,6 +46,10 @@ class CodigoBarraBase(BaseModel):
         from_attributes=True,  
         populate_by_name=True   
     )
+
+# Esquema para crear (lo que recibe el POST)
+class ArticuloCreate(ArticulosBase):
+    pass
 
 
 #Esquema empresas con lista de negocios
@@ -64,9 +68,9 @@ class ArticuloBaseCompleto(BaseModel):
     )
 
 class Negocio(BaseModel):
-    id: Optional[int] = Field(alias="id")
-    cod_negocio:  str = Field(alias="codNegocio", max_length=20)
-    nom_negocio:  str = Field(alias="nomNegocio", max_length=20)
+    id: Optional[int] = Field(alias="idNegocio")
+    cod_negocio:  str = Field(alias="Codnegocio", max_length=20)
+    nom_negocio:  str = Field(alias="NomNegocio", max_length=20)
 
     model_config = ConfigDict(
         from_attributes=True,  
@@ -118,6 +122,48 @@ class GeneracionCodigoBarra(BaseModel):
     class Config:
         from_attributes = True
 
-# Esquema para crear (lo que recibe el POST)
-class ArticuloCreate(ArticulosBase):
-    pass
+# Esquema para paginacion 
+class PaginatedArticuloResponse(BaseModel):
+    content: List[ArticuloPaginacion]
+    totalElements: int
+    totalPages: int
+    number: int
+    size: int
+
+# Esquema para paginacion
+class ArticuloPaginacion(BaseModel):
+    id_articulo: int
+    cod_articulo: str = Field(alias="codArticulo")
+    nom_articulo: str = Field(alias="nomArticulo")
+    activo_stock: str = Field(alias="activo")
+    
+    # Campos aplanados
+    nom_subcategoria: str = Field(alias="nomSubCategoria")
+    nom_categoria: str = Field(alias="nomCategoria")
+    nom_negocio: str= Field(alias="nomNegocio")
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def flatten_categories(cls, data):
+        # 'data' es la instancia de la clase 'Articulo' de SQLAlchemy
+        if hasattr(data, 'subcategoria') and data.subcategoria:
+            # Seteamos el nombre de la subcategoría
+            setattr(data, 'nom_subcategoria', data.subcategoria.nom_subcategoria)
+            
+            # Navegamos un nivel más hacia la categoría (parent)
+            if hasattr(data.subcategoria, 'parent') and data.subcategoria.parent:
+                setattr(data, 'nom_categoria', data.subcategoria.parent.nom_categoria)
+        
+        # Procesar Negocio
+        neg = getattr(data, 'objnegocio', None)
+        if neg:
+        # IMPORTANTE: Revisa si en tu tabla Negocio la columna se llama 'nom_negocio' o 'negocio'
+        # Según tu código anterior, parece que el campo de texto se llama 'negocio'
+         setattr(data, 'nom_negocio', getattr(neg, 'nom_negocio', ""))
+
+        return data

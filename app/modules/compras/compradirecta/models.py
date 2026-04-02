@@ -17,6 +17,7 @@ class Compra(Base):
     documento = Column(String(16), nullable=False)
     nro_docum = Column(Integer, nullable=False)
     remito = Column(String(30), nullable=False)
+    status= Column(String(2), nullable=False)
     ingresa_bodega = Column(String(2), nullable=False)
     id_bodega = Column(Integer,ForeignKey("m_bodegas.id"), nullable=False)
     id_estado = Column(Integer, nullable=False)
@@ -65,7 +66,7 @@ class DetalleCompra(Base):
     linea = Column(Integer, primary_key=True)
 
     id_articulo = Column(Integer, nullable=False) 
-    id_codbarra = Column(Integer, nullable=False)
+    id_codbarra = Column(Integer, ForeignKey("public.m_artxcodigobarra.id_codbarra"), nullable=False)
     ref_compras = Column(String(100), nullable=False)
     
     # Precios y Costos (Numeric para precisión financiera)
@@ -73,10 +74,12 @@ class DetalleCompra(Base):
     cantidad = Column(Integer, nullable=False)
     id_lote = Column(Integer, nullable=False)
     stock = Column(Integer, nullable=False)
+    porc_dcto = Column(Numeric, nullable=False)
+    imp_dcto = Column(Numeric(14, 2), nullable=False)
     
     # Impuesto 1
     impuesto1 = Column(String(6), nullable=False)
-    id_tasaimp1 = Column(Integer, nullable=False)
+    id_tasaimp1 = Column(Integer,ForeignKey("public.m_impuesto.id"), nullable=False)
     valor_impuesto1 = Column(Numeric(14, 2), nullable=False)
     
     # Impuesto 2
@@ -88,12 +91,20 @@ class DetalleCompra(Base):
     impuesto3 = Column(String(6), nullable=False)
     id_tasaimp3 = Column(Integer, nullable=False)
     valor_impuesto3 = Column(Numeric(14, 2), nullable=False)
-    
+     
     # Totales de la línea
     costo_total = Column(Numeric(14, 2), nullable=False)
     importe = Column(Numeric(14, 2), nullable=False)
 
     parent = relationship("Compra", back_populates="detalles")
+    #referencias
+    articulo = relationship(
+    "CodigosBarra", 
+    back_populates="compras",
+    primaryjoin="DetalleCompra.id_codbarra == CodigosBarra.id_codbarra",
+    foreign_keys=[id_codbarra]
+    ) 
+    detalleimpuesto1 = relationship("Impuesto", back_populates="compras") 
 
 class DetalleCompraNuevoCodigoBarra(Base):
     __tablename__ = "td_comprasnewcodbarra"
