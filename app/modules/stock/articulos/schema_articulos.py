@@ -20,10 +20,9 @@ class ArticulosBase(BaseModel):
     id_tiposervicio: int = Field(alias="idTipoService") 
     id_impuesto: int = Field(alias="idImpuesto") 
     id_ref: int = Field(alias="idRef")     
-    activo_stock: str = Field(alias="activoStock", max_length=2)
+    activo_stock: bool = Field(alias="activoStock")
     stock_min: Optional[int]  = Field(alias="stockMin") 
     stock_max: Optional[int]  = Field(alias="stockMax")     
-    activo_comercial: str = Field(alias="activoComercial", max_length=2)
     grupo_contable: str = Field(alias="grupoContable", max_length=20)
     cta_inventario: Optional[str]  = Field(alias="cuentaInventario", max_length=15)
     fecha_mod: Optional[datetime] = Field(alias="fechaMod",default=None)
@@ -37,10 +36,12 @@ class ArticulosBase(BaseModel):
     )
 
 class CodigoBarraBase(BaseModel):
-    id_codbarra: Optional[int] = Field(None,alias="id") 
+    id_codbarra: Optional[int] = Field(None,alias="idCodBarra") 
     id_articulo: Optional[int] = Field(None,alias="idArticulo") 
     cod_barra: str = Field(alias="codBarra", max_length=50)
     ref_barra: str = Field(alias="nomBarra", max_length=100)
+    estado: bool = Field(alias="estado"),
+    registro_nuevo : bool= Field(alias="registro_nuevo"),
 
     model_config = ConfigDict(
         from_attributes=True,  
@@ -135,7 +136,7 @@ class ArticuloPaginacion(BaseModel):
     id_articulo: int
     cod_articulo: str = Field(alias="codArticulo")
     nom_articulo: str = Field(alias="nomArticulo")
-    activo_stock: str = Field(alias="activo")
+    activo_stock: bool = Field(alias="activoStock")
     
     # Campos aplanados
     nom_subcategoria: str = Field(alias="nomSubCategoria")
@@ -167,3 +168,14 @@ class ArticuloPaginacion(BaseModel):
          setattr(data, 'nom_negocio', getattr(neg, 'nom_negocio', ""))
 
         return data
+    
+# Esquema para actualizacion masiva de stock
+class ArticuloActualizacionDatos(BaseModel):    
+    idcodbarra: int
+    stock: int
+    movimientos: int
+
+    model_config = ConfigDict(
+        from_attributes=True,  
+        populate_by_name=True   
+    )

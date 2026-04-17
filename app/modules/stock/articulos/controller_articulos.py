@@ -52,44 +52,36 @@ def existe_barra(id_articulo: int, cod_barra: str, db: Session = Depends(get_db)
     existe = repository_articulos.check_exists_cod_barra(db, id_articulo, cod_barra)
     return repository_articulos.generacion_codigobarra(db,id_articulo,cod_barra)
 
+#Valida el stock actual de los codigos de barra y valida si han tenido movimientos en el stock
+@router.get("/stock-masivo", response_model=List[schema_articulos.ArticuloActualizacionDatos])
+def get_stock_masivo(id_articulo: int,cadena: str,db: Session = Depends(get_db)):
+    return repository_articulos.consultar_stock_codigosbarra(db, cadena, id_articulo)  
+
 @router.post("/save")
 def save_articulo(articulo: schema_articulos.ArticuloCreate, db: Session = Depends(get_db)):
     """Crea una nueva bodega y retorna el objeto con su ID generado."""
-    try:
-        repository_articulos.create_articulo(db=db, obj=articulo)
-        return {
+    repository_articulos.create_articulo(db=db, obj=articulo)
+    return {
             "status": "success",
             "message": "Articulo creada exitosamente",
             "data": None  # Omites el objeto completo para ahorrar recursos
-        }
-    except Exception as e:
-        # Aquí devuelves un error controlado, por ejemplo 400 (Bad Request)
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "status": "error",
-                "message": f"Error al guardar: {str(e)}",
-                "data": None
-            }
-        )
+    }
+
     
 @router.put("/edit/{id_articulo}")
 def actualizar_articulo(id_articulo: int, articulo: schema_articulos.ArticuloCreate, db: Session = Depends(get_db)):
     """Actualiza los datos de una bodega existente."""
-    try:
-        repository_articulos.update_bodega(db, id_articulo=id_articulo, obj=articulo)
-        return {
+    repository_articulos.update_articulo(db, id_articulo=id_articulo, obj=articulo)
+    return {
                 "status": "success",
-                "message": "Bodega editada exitosamente",
+                "message": "Articulo actualizado exitosamente",
                 "data": None  # Omites el objeto completo para ahorrar recursos
-        }
-    except Exception as e:
-            # Aquí devuelves un error controlado, por ejemplo 400 (Bad Request)
-        return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={
-                    "status": "error",
-                    "message": f"Error al guardar: {str(e)}",
-                    "data": None
-                }
-        )    
+    } 
+
+@router.delete("/delete/{id_articulo}", status_code=status.HTTP_204_NO_CONTENT)
+def eliminar_bodega(id_articulo: int, db: Session = Depends(get_db)):
+    """Elimina un artiulo del sistema."""
+    success = repository_articulos.delete_articulo(db, id_articulo=id_articulo)
+    if not success:
+        raise HTTPException(status_code=404, detail="Articulo no encontrada")
+    return None  

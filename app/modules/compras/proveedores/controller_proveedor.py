@@ -9,6 +9,13 @@ router = APIRouter(
     prefix="/compras/proveedor",
     tags=["Compras - Proveedor"])
 
+@router.get("/pagination", response_model=schema_proveedor.PaginatedProveedorResponse)
+def list_bodegas_paginacion(  
+    page: int = Query(0, ge=0),
+    size: int = Query(10, ge=1),
+    db: Session = Depends(get_db)):
+    return repository_proveedor.get_proveedor_paginated(db, page, size)
+
 @router.get("/proveedorsearch", response_model=List[schema_proveedor.ProveedorSearch])
 def search_articulos(
     query: str, 

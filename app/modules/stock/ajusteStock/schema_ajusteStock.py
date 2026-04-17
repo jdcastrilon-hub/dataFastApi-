@@ -26,7 +26,7 @@ class AjusteStockBase(BaseModel):
 
     model_config = ConfigDict(
     from_attributes=True,  
-    populate_by_name=True)
+    populate_by_name=True) 
 
 # --- Esquemas para el Detalle ---
 class DetalleAjusteBase(BaseModel):
@@ -40,6 +40,7 @@ class DetalleAjusteBase(BaseModel):
     id_lote: int = Field(alias="idLote")
     cant_disp: int = Field(alias="cantDisp")
     cantidad: int = Field(alias="cantidad")
+    articulo : Optional[ArticuloSimple] = None  #Solo aplica para la edicion de la compra.
 
     model_config = ConfigDict(
     from_attributes=True,  
@@ -47,3 +48,46 @@ class DetalleAjusteBase(BaseModel):
 
 class AjusteStockCreate(AjusteStockBase):
     pass # id_trans se hereda de la cabecera al insertar
+
+# Esquema para paginacion 
+class PaginatedAjusteResponse(BaseModel):
+    content: List[AjustePaginacion]
+    totalElements: int
+    totalPages: int
+    number: int
+    size: int
+
+
+    # Esquema para paginacion
+class AjustePaginacion(BaseModel):
+    id_trans: int= Field(alias="idTrans")
+    nro_docum: int= Field(alias="nroDocum")
+    fecha_movimiento: datetime = Field(alias="fechaMovimiento")
+    observacion :str = Field(alias="Observaciones")
+    bodega : Optional[BodegaSimple] = None
+    estado : Optional[EstadoSimple] = None 
+    motivo : Optional[MotivoSimple] = None 
+
+    
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True
+    )
+
+class BodegaSimple(BaseModel):
+    nom_bodega: str = Field(alias="nomBodega", max_length=80)    
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+class EstadoSimple(BaseModel):
+    cod_estado: str = Field(alias="codEstado", max_length=20)    
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+class MotivoSimple(BaseModel):
+    nom_motivo: str = Field(alias="nomMotivo", max_length=80)    
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+class ArticuloSimple(BaseModel):
+    cod_barra: str = Field(alias="codArticulo" , max_length=50)
+    ref_barra: str = Field(alias="nomArticulo" , max_length=100)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)

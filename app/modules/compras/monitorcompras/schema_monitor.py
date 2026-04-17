@@ -23,7 +23,7 @@ class Comprasrealizadas(BaseModel):
     model_config = ConfigDict(
         from_attributes=True,  
         populate_by_name=True   
-    )
+    ) 
 
 # Modelo principal de respuesta del Monitor
 class MonitorComprasRealizadas(BaseModel):

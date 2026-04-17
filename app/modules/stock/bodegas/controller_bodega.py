@@ -93,8 +93,9 @@ def eliminar_bodega(bodega_id: int, db: Session = Depends(get_db)):
 @router.get("/stockDisponiblexBodega", response_model=List[schema_bodega.StockDisponibleResponse])
 def get_stock_disponible(
     idArticulo: int ,
+    idCodbarra: int ,
     idBodega: int ,
     idEstado: int ,
     db: Session = Depends(get_db)
 ):
-    return repository_bodega.get_stock_disponible(db,idArticulo, idBodega, idEstado)
+    return repository_bodega.get_stock_disponible(db,idArticulo,idCodbarra, idBodega, idEstado)

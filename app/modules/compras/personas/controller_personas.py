@@ -14,3 +14,9 @@ router = APIRouter(
 def listar_documentos(db: Session = Depends(get_db)):
     """Obtiene la lista de todos los tipos de documentos."""
     return repository_personas.get_personas(db)
+
+@router.get("/personaSearch", response_model=List[schema_personas.PersonaSearch])
+def search_articulos(
+    query: str, 
+    db: Session = Depends(get_db)):
+    return repository_personas.find_persona_by_query(db,query)

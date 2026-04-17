@@ -2,7 +2,6 @@ from fastapi import HTTPException
 from sqlalchemy import desc, text
 from sqlalchemy.orm import Session , joinedload
 from . import models, schema_compras 
-from app.modules.compras.proveedores import model_proveedor
 
 #Paginacion
 def get_compras_paginated(db: Session, page: int, size: int,idempresa: int):
@@ -14,7 +13,7 @@ def get_compras_paginated(db: Session, page: int, size: int,idempresa: int):
     items = db.query(models.Compra)\
     .filter(models.Compra.id_emp == idempresa)\
     .options(
-        joinedload(models.Compra.proveedor),
+        joinedload(models.Compra.proveedor), 
         joinedload(models.Compra.bodega))\
     .offset(offset)\
     .limit(size)\

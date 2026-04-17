@@ -1,4 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request , status
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from app.exception_handlers import add_exception_handlers
 from app.modules.core.pais.controller import router as pais_router
 from app.modules.stock.bodegas.controller_bodega import router as bodegas
 from app.modules.core.sucursales.controller_sucursal import router as sucursales
@@ -12,6 +15,7 @@ from app.modules.stock.estados.controller_estado import router as estados
 from app.modules.stock.trasladostock.controller_trasladoStock import router as traslado
 from app.modules.stock.reporteInventario.controller_reporteinventario import router as reporteinventario
 from app.modules.stock.tiposervicio.controller_servicios import router as tiposervicio
+from app.modules.stock.monitorstock.controller_monitor import router as monitorstock
 from app.modules.core.empresas.controller_empresa import router as empresas
 from app.modules.core.negocios.controller_negocio import router as negocios
 from app.modules.core.ciudades.controller_ciudades import router as ciudad
@@ -25,6 +29,9 @@ from app.core.Services.ServiceInicializacion.controller_serviciosIni import rout
 from fastapi.middleware.cors import CORSMiddleware
  
 app = FastAPI(title="Mi ERP API")
+
+# exeptiones del sistema
+add_exception_handlers(app)
 
 # Registrar los módulos (Como si fueran Controllers en Spring)
 #app.include_router(stock_router)
@@ -70,3 +77,4 @@ app.include_router(traslado)
 app.include_router(reporteinventario)
 app.include_router(monitorcompras)
 app.include_router(tiposervicio)
+app.include_router(monitorstock)

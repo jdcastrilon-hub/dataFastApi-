@@ -1,6 +1,42 @@
 from sqlalchemy import desc, text
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from . import models, schema_ajusteStock 
+
+#Paginacion
+def get_ajustes_paginated(db: Session, page: int, size: int):
+    # 1. Contar el total de registros en la tabla
+    total_records = db.query(models.AjusteStock).count()
+    
+    # 2. Obtener los registros de la página actual
+    offset = page * size
+    items = (
+    db.query(models.AjusteStock)
+    .options(
+        joinedload(models.AjusteStock.bodega),
+        joinedload(models.AjusteStock.estado),
+        joinedload(models.AjusteStock.motivo))\
+    .order_by(desc(models.AjusteStock.fecha_mod))
+    .offset(offset)
+    .limit(size)
+    .all()
+)
+    
+    # 3. Calcular total de páginas
+    total_pages = (total_records + size - 1) // size
+    
+    return {
+        "content": items,
+        "totalElements": total_records,
+        "totalPages": total_pages,
+        "number": page,
+        "size": size
+    }
+
+# Obtener un ajuste por ID
+def get_ajustestock(db: Session, id_trans: int): 
+    return db.query(models.AjusteStock).filter(models.AjusteStock.id_trans == id_trans)\
+                    .options(joinedload(models.AjusteStock.detalles)
+                    .joinedload(models.DetalleAjusteStock.articulo)).first()
 
 def create_ajustestock(db: Session, obj: schema_ajusteStock.AjusteStockCreate, nro_docum: int):
     try:

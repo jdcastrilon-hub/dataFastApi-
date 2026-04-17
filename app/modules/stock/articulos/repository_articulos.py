@@ -95,7 +95,43 @@ def generacion_codigobarra(db: Session, id_articulo: int, cod_barra: str):
         "idCodBarra": idBarra,
         "existe": existe
         
-    }        
+    }  
+
+def consultar_stock_codigosbarra(db: Session, cadena: str, id_articulo: int):
+    """
+    Llama a la función fn_compras_masivo_stock_costo de PostgreSQL 
+    para obtener saldos y costos de múltiples artículos en una sola petición.
+    """
+    try:
+        # 1. Definimos la consulta a la función
+        query = text("""
+            SELECT idcodbarra, stock, movimientos 
+            FROM public.articulo_obtener_stock_masivo(:articulo,:cadena)
+        """)
+        
+        # 2. Ejecutamos pasando los parámetros
+        result = db.execute(query, {
+            "cadena": cadena, 
+            "articulo": id_articulo
+        })
+        
+        # 3. Mapeamos el resultado a una lista de diccionarios
+        # Importante: Usamos nombres en CamelCase para que coincidan con tu Angular
+        lista_actualizada = [
+            {
+                "idcodbarra": row.idcodbarra,
+                "stock": row.stock,
+                "movimientos": row.movimientos
+            }
+            for row in result
+        ]
+        
+        return lista_actualizada    
+
+    except Exception as e:
+        # Log del error para depuración en Matrix
+        print(f"Error en consultar_stock_lote: {str(e)}")
+        return []  
 
 #Paginacion
 def get_articulos_paginated(db: Session, page: int, size: int):
@@ -147,7 +183,6 @@ def create_articulo(db: Session, obj: schema_articulos.ArticuloCreate):
             activo_stock = obj.activo_stock,
             stock_min = obj.stock_min,
             stock_max = obj.stock_max,
-            activo_comercial = obj.activo_comercial,
             grupo_contable = obj.grupo_contable,
             cta_inventario = obj.cta_inventario,
             logs=logs_dict,
@@ -160,7 +195,8 @@ def create_articulo(db: Session, obj: schema_articulos.ArticuloCreate):
             db_codigos = model_articulos.CodigosBarra(
                 id_articulo=bd_articulo.id_articulo,
                 cod_barra=codigos.cod_barra,
-                ref_barra=codigos.ref_barra
+                ref_barra=codigos.ref_barra,
+                estado= codigos.estado
             )
             db.add(db_codigos)
 
@@ -185,20 +221,81 @@ def update_articulo(db: Session, id_articulo: int, obj : schema_articulos.Articu
         bd_articulo.id_unidad = obj.id_unidad
         bd_articulo.id_tiposervicio = obj.id_tiposervicio
         bd_articulo.id_impuesto = obj.id_impuesto
-        bd_articulo.imp_total = obj.imp_total
-        bd_articulo.observaciones = obj.observacion
-        bd_articulo.impuesto1 = obj.impuesto1
-        bd_articulo.valor_impuesto1 = obj.valor_impuesto1
-        bd_articulo.activo_stock = obj.activo_stock,
-        bd_articulo.stock_min = obj.stock_min,
-        bd_articulo.stock_max = obj.stock_max,
-        bd_articulo.activo_comercial = obj.activo_comercial,
-        bd_articulo.grupo_contable = obj.grupo_contable,
-        bd_articulo.cta_inventario = obj.cta_inventario,
-        
+        bd_articulo.activo_stock = obj.activo_stock
+        bd_articulo.stock_min = obj.stock_min
+        bd_articulo.stock_max = obj.stock_max
+        bd_articulo.grupo_contable = obj.grupo_contable
+        bd_articulo.cta_inventario = obj.cta_inventario
+    
         bd_articulo.logs = [log.model_dump() for log in obj.logs]
         bd_articulo.fecha_mod = obj.fecha_mod
+
+         # 2. Crear los codigos de barra para el model
+        db.query(model_articulos.CodigosBarraModel).filter(model_articulos.CodigosBarraModel.id_articulo == id_articulo).delete()        
+        db.flush()
+         
+        for i,codigos in enumerate(obj.codigosBarra, start=1):
+            db_codigos = model_articulos.CodigosBarraModel(
+                id_articulo=id_articulo,
+                id_codbarra=codigos.id_codbarra or 0,
+                linea=i, #Numerador de linea
+                cod_barra=codigos.cod_barra,
+                ref_barra=codigos.ref_barra,
+                estado= codigos.estado,
+                registro_nuevo=codigos.registro_nuevo
+            )
+            db.add(db_codigos)
+        db.flush()
+        
+        db.execute(
+                text("CALL public.sp_articulo_updatecodigosbarra(:p_id_articulo)"), 
+                {"p_id_articulo": id_articulo}
+            )   
+            
+
+        db.commit()
+        db.refresh(bd_articulo)
+        return bd_articulo
         
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=f"Error al editar la compra: {str(e)}")    
+        raise HTTPException(status_code=400, detail=f"Error al editar el articulo: {str(e)}")    
+    
+
+# Eliminar Articulo
+def delete_articulo(db: Session, id_articulo: int):
+    try:
+        # 1. Borramos los hijos primero
+        db.query(model_articulos.CodigosBarra).filter(
+            model_articulos.CodigosBarra.id_articulo == id_articulo
+        ).delete()
+
+        db.query(model_articulos.CodigosBarraModel).filter(
+            model_articulos.CodigosBarraModel.id_articulo == id_articulo
+        ).delete()
+        
+        # 2. Buscamos el artículo para confirmar que existe y retornarlo
+        bd_articulo = db.query(model_articulos.Articulo).filter(
+            model_articulos.Articulo.id_articulo == id_articulo
+        ).first()
+
+        if not bd_articulo:
+            # Si no existe, no hay nada que borrar
+            return None 
+
+        # 3. Borramos el padre
+        db.delete(bd_articulo)
+        
+        # 4. Guardamos cambios
+        db.commit()
+        
+        return bd_articulo
+
+    except Exception as e:
+        # ¡IMPORTANTE! Si algo falla, deshacemos todo para evitar el error 25P02
+        db.rollback()
+        print(f"Error al eliminar artículo: {str(e)}")
+        raise HTTPException(
+            status_code=400, 
+            detail=f"No se pudo eliminar el artículo. Verifique si tiene movimientos asociados: {str(e)}"
+        )

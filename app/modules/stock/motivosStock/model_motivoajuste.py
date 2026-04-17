@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime, JSON
 from sqlalchemy.ext.declarative import declarative_base
 import datetime
+from sqlalchemy.orm import relationship
 from app.database import Base
 
 class MotivoAjuste(Base):
@@ -15,3 +16,10 @@ class MotivoAjuste(Base):
     cta_inventario = Column(String(15), nullable=False)
     fecha_mod = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
     logs = Column(JSON, nullable=True)
+
+    #Relaciones
+    ajustes = relationship(
+        "AjusteStock", 
+        back_populates="motivo",
+        primaryjoin="MotivoAjuste.id == AjusteStock.id_motivo"
+    )

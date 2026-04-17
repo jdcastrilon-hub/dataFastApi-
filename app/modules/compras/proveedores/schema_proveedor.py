@@ -9,6 +9,7 @@ class LogEntry(BaseModel):
     fecha_mod: str
 
 class ProveedorBase(BaseModel):
+    id_emp : int  = Field(alias="idEmp")
     id_proveedor: Optional[int] = Field(None, alias="idProveedor")
     id_persona: Optional[int] = Field(None, alias="idPersona")
     cod_tit: str = Field(alias="codigoTitular", max_length=50)
@@ -24,7 +25,7 @@ class ProveedorBase(BaseModel):
     from_attributes=True,  
     populate_by_name=True)
 
-class PersonaBase(BaseModel):
+class PersonaBase(BaseModel):    
     id_tipodoc: int = Field(alias="idTipoDoc")
     cod_tit:  str = Field(alias="codigoTitular", max_length=50)
     nombres: str = Field(alias="nombres", max_length=60)
@@ -53,4 +54,27 @@ class ProveedorSearch(BaseModel):
     razon_social: str = Field(alias="nombreCompleto", max_length=80)
 
     class Config:
-        from_attributes = True        
+        from_attributes = True       
+
+# Esquema para paginacion 
+class PaginatedProveedorResponse(BaseModel):
+    content: List[ProveedorPaginacion]
+    totalElements: int
+    totalPages: int
+    number: int
+    size: int 
+
+
+    # Esquema para paginacion
+class ProveedorPaginacion(BaseModel):
+    id_proveedor : int
+    cod_tit: str = Field(alias="codBodega", max_length=50)
+    razon_social: str = Field(alias="nomBodega", max_length=150)
+    activo: str = Field(alias="activo", max_length=2)
+    fecha_mod: Optional[datetime] = Field(alias="fechaMod",default=None)
+  
+
+    model_config = ConfigDict(
+        from_attributes=True,  
+        populate_by_name=True   
+    )

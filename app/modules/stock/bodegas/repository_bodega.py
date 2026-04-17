@@ -65,25 +65,21 @@ def get_bodegas_paginated(db: Session, page: int, size: int):
         "size": size
     }
 
-def get_stock_disponible(db: Session, id_articulo: int, id_bodega: int, id_estado: int):
-        # Definimos el query nativo llamando a la función
-        query = text("""
+def get_stock_disponible(db: Session, idArticulo: int,idCodbarra: int, idBodega: int, idEstado: int):
+    # Definimos el query nativo llamando a la función
+    query = text("""
             SELECT 
-                s.id AS "idArticulo", 
-                s.codigo_articulo AS "codArticulo", 
-                s.nombre_articulo AS "nomArticulo", 
-                s.ubicacion AS "ubicacion", 
-                s.lote AS "lote", 
                 s.stock AS "stock"
-            FROM stockdisponiblexBodega(:idArticulo, :idBodega, :idEstado) AS s
-        """)
+            FROM stockdisponiblexBodega(:param_articulo_id,:param_id_codbarra, :param_bodega_id, :param_estado_id) AS s
+    """)
         
-        # Ejecutamos con los parámetros
-        result = db.execute(query, {
-            "idArticulo": id_articulo,
-            "idBodega": id_bodega,
-            "idEstado": id_estado
-        })
+    # Ejecutamos con los parámetros
+    result = db.execute(query, {
+            "param_articulo_id": idArticulo,
+            "param_id_codbarra": idCodbarra,
+            "param_bodega_id": idCodbarra,
+            "param_estado_id": idEstado
+    })
         
-        # Convertimos los resultados a diccionarios para que Pydantic los valide
-        return result.mappings().all()
+    # Convertimos los resultados a diccionarios para que Pydantic los valide
+    return result.mappings().all()

@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, DateTime, JSON, func
 from sqlalchemy.ext.declarative import declarative_base
-import datetime
+from sqlalchemy.orm import relationship
 from app.database import Base
 
 class Estado(Base):
@@ -18,3 +18,10 @@ class Estado(Base):
     # Auditoría
     fecha_mod = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
     logs = Column(JSON, nullable=True)
+
+    #relaciones
+    ajustes = relationship(
+        "AjusteStock", 
+        back_populates="estado",
+        primaryjoin="Estado.id == AjusteStock.id_estado"
+    )

@@ -73,13 +73,20 @@ class BodegaResponse(BodegaBase):
     
 # Esquema para reportes*****************************
 # Esquema Stock Disponible
-class StockDisponibleResponse(BaseModel):
+class ListStockDisponibleResponse(BaseModel):
     idArticulo: int
     codArticulo: str
     nomArticulo: str
     ubicacion: Optional[str] = None
     lote: Optional[str] = None
     stock: float
+
+    class Config:
+        from_attributes = True    
+
+        # Esquema Stock Disponible
+class StockDisponibleResponse(BaseModel):
+    stock: int
 
     class Config:
         from_attributes = True    

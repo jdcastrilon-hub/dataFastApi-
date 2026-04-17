@@ -28,3 +28,11 @@ class PersonaResponse(PersonaBase):
 
     class Config:
         from_attributes = True
+
+class PersonaSearch(BaseModel):
+    id_persona: int = Field(alias="idPersona") 
+    cod_tit: str = Field(alias="codTit", max_length=20)
+    nombre_completo: str = Field(alias="nombreCompleto", max_length=80)
+
+    class Config:
+        from_attributes = True      

@@ -14,6 +14,7 @@ class CategoriaPaginacion(BaseModel):
     cod_categoria: str = Field(alias="categoria", max_length=20)
     nom_categoria: str = Field(alias="nomCategoria", max_length=80)
     fecha_mod: Optional[datetime] = Field(alias="fechaMod",default=None)
+    estado: bool = Field(alias="estado",default=False)
 
     model_config = ConfigDict(
         from_attributes=True,  
@@ -34,7 +35,7 @@ class CategoriaBase(BaseModel):
     id_emp: int = Field(alias="idEmpresa")
     cod_categoria: str = Field(alias="codCategoria", max_length=15)
     nom_categoria: str = Field(alias="nomCategoria", max_length=50)
-    estado: str = Field(alias="estado", max_length=20)
+    estado: bool = Field(alias="estado",default=False)
     fecha_mod: Optional[datetime] = Field(alias="fechaMod",default=None)
     subcategorias: List[SubcategoriaBase] = Field(default=[], alias="subCategorias")
     logs: List[LogEntry]
@@ -48,6 +49,7 @@ class SubcategoriaBase(BaseModel):
     id: Optional[int] = Field(alias="id")
     cod_subcategoria:  str = Field(alias="codSubCategoria", max_length=20)
     nom_subcategoria:  str = Field(alias="nomSubCategoria", max_length=50)
+    tiene_articulos: bool = Field(alias="tieneArticulos")
 
     model_config = ConfigDict(
         from_attributes=True,  

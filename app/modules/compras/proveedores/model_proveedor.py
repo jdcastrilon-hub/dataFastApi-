@@ -3,10 +3,11 @@ from sqlalchemy.orm import relationship
 from app.database import Base
 import datetime
 
-class Proveedor(Base):
+class Proveedor(Base): 
     __tablename__ = "m_proveedores"
     __table_args__ = {"schema": "public"}
 
+    id_emp = Column(Integer, ForeignKey("public.m_empresa.id_emp"), nullable=False)
     id_proveedor = Column(Integer,Sequence("m_proveedores_id_proveedor_seq"), primary_key=True, index=True, autoincrement=True)
     id_persona = Column(Integer, ForeignKey("public.m_personas.id_persona"), nullable=False)
     cod_tit = Column(String(50), unique=True, nullable=False)

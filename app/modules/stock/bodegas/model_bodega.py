@@ -23,6 +23,11 @@ class Bodega(Base):
         "Compra", 
         back_populates="bodega",
         primaryjoin="Bodega.id == Compra.id_bodega"
+    ) 
+    ajustes = relationship(
+        "AjusteStock", 
+        back_populates="bodega",
+        primaryjoin="Bodega.id == AjusteStock.id_bodega"
     )
 
     # Definimos la restricción UNIQUE que tienes en el SQL
