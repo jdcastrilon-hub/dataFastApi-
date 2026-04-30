@@ -25,6 +25,8 @@ from app.modules.compras.personas.controller_personas import router as persona
 from app.modules.compras.proveedores.controller_proveedor import router as provedor
 from app.modules.compras.compradirecta.controller_compras import router as compra
 from app.modules.compras.monitorcompras.controller_monitor import router as monitorcompras
+from app.modules.compras.ajustecostos.controller_ajustecosto import router as ajusteCostos
+from app.modules.comercial.clientes.controller_cliente import router as cliente
 from app.core.Services.ServiceInicializacion.controller_serviciosIni import router as serviciosini
 from fastapi.middleware.cors import CORSMiddleware
  
@@ -78,3 +80,5 @@ app.include_router(reporteinventario)
 app.include_router(monitorcompras)
 app.include_router(tiposervicio)
 app.include_router(monitorstock)
+app.include_router(ajusteCostos)
+app.include_router(cliente)

@@ -27,5 +27,5 @@ class Persona(Base):
 
     #Relacion Proveedor
     proveedor= relationship("Proveedor", back_populates="persona") 
-
+    cliente= relationship("Cliente", back_populates="persona") 
     

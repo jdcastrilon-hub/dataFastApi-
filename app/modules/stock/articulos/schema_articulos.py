@@ -70,8 +70,8 @@ class ArticuloBaseCompleto(BaseModel):
 
 class Negocio(BaseModel):
     id: Optional[int] = Field(alias="idNegocio")
-    cod_negocio:  str = Field(alias="Codnegocio", max_length=20)
-    nom_negocio:  str = Field(alias="NomNegocio", max_length=20)
+    cod_negocio:  str = Field(alias="Codnegocio", max_length=10)
+    nom_negocio:  str = Field(alias="NomNegocio", max_length=100)
 
     model_config = ConfigDict(
         from_attributes=True,  
