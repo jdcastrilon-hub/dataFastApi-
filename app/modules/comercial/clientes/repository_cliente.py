@@ -4,6 +4,29 @@ from sqlalchemy.orm import Session
 from . import model_cliente , schema_cliente
 from app.modules.compras.personas import modelo_personas
 
+def find_clientes_by_query(db: Session, query: str):
+        # Creamos el patrón para el LIKE: %query%
+        search_filter = f"%{query}%"
+        
+        return (
+            db.query(
+                model_cliente.Cliente.id_cliente.label("idCliente"),
+                model_cliente.Cliente.id_persona.label("idPersona"),
+                model_cliente.Cliente.cod_tit.label("codTit"),
+                model_cliente.Cliente.nom_cliente.label("nombreCompleto")
+            )
+            .filter(
+                or_(
+                    model_cliente.Cliente.cod_tit.ilike(search_filter),
+                    model_cliente.Cliente.nom_cliente.ilike(search_filter)
+                )
+            )
+            .order_by(model_cliente.Cliente.nom_cliente)
+            .limit(20)
+            .all()
+        )
+
+
 
 # Crear un proveedor
 def create_cliente(db: Session, obj: schema_cliente.ClienteCreate):

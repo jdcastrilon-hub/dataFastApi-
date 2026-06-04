@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Numeric, Sequence, String, DateTime, JSON, ForeignKey
+from sqlalchemy import Boolean, Column, Integer, Numeric, Sequence, String, DateTime, JSON, ForeignKey
 from sqlalchemy.orm import relationship
 from app.database import Base
 import datetime
@@ -12,7 +12,7 @@ class Cliente(Base):
     id_persona = Column(Integer, ForeignKey("public.m_personas.id_persona"), nullable=False)
     cod_tit = Column(String(50), unique=True, nullable=False)
     nom_cliente = Column(String(100), nullable=False)
-    activo = Column(String(2), nullable=False)
+    activo = Column(Boolean, nullable=False)
     observacion = Column(String(250), nullable=False)
     direccion = Column(String(50), nullable=False)
     mail = Column(String(60), nullable=False)

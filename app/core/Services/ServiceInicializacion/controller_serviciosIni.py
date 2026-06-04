@@ -30,3 +30,13 @@ def get_compra_disponible(
     db: Session = Depends(get_db)
 ):
     return repository_serviciosIni.get_compra_disponible(db,idArticulo,idACodBarra, idBodega, idEstado,idProveedor) 
+
+@router.get("/ventaDisponiblexBodega", response_model=list[schema_serviciosIni.StockDisponibleResponse])
+def get_venta_disponible(
+    idArticulo: int ,
+    idACodBarra: int ,
+    idBodega: int ,
+    idEstado: int ,
+    db: Session = Depends(get_db)
+):
+    return repository_serviciosIni.get_venta_disponible(db,idArticulo,idACodBarra, idBodega, idEstado) 

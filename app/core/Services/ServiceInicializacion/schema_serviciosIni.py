@@ -11,4 +11,11 @@ class NumeradorResponse(BaseModel):
 class StockDisponibleResponse(BaseModel):
     stock: int
     costo: Decimal
+
+# Esquema venta Disponible
+class StockDisponibleResponse(BaseModel):
+    stock: int
+    precio: Decimal
+    impuesto : int
+    porcentaje : Decimal
  

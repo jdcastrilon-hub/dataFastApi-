@@ -2,6 +2,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional, List, Any
 from datetime import datetime
 from app.modules.stock.bodegas import schema_bodega
+from app.modules.comercial.documentos import schema_docum
 
 class SucursalBase(BaseModel):
     id_emp: int = Field(alias="idEmpresa")
@@ -39,6 +40,7 @@ class SucursalListComboByBodegas(BaseModel):
         alias="list_bodegas", 
         validation_alias="bodegas" 
     )
+    documentos : List[schema_docum.DocumentCombo]
 
     model_config = ConfigDict(
         from_attributes=True,  

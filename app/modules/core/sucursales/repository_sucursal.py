@@ -2,6 +2,7 @@ from sqlalchemy import desc
 from sqlalchemy.orm import Session, joinedload
 from . import model_sucursal, schema_sucursal
 from app.modules.stock.bodegas import model_bodega
+from app.modules.comercial.documentos import model_docum
 
 def get_sucursales(db: Session, page: int = 0, size: int = 100):
     print(page)
@@ -29,16 +30,23 @@ def get_sucursales_by_bodegas(db: Session, id_empresa: int):
         .options(joinedload(model_sucursal.Sucursal.bodegas))\
         .filter(model_sucursal.Sucursal.id_emp == id_empresa)\
         .all()
-
+    
     # 2. Mapeamos directamente
     resultado = []
     for sucursal in sucursales:
+        #Documentos de la empresa y sucursal
+        documentos = db.query(model_docum.DocumentoVenta)\
+        .filter(model_docum.DocumentoVenta.id_emp == id_empresa,
+                model_docum.DocumentoVenta.id_sucursal_emp == sucursal.id)\
+        .all()
+
         resultado.append({
             "id": sucursal.id,
             "idEmpresa": sucursal.id_emp,
             "codSucursal": sucursal.cod_sucursal,
             "nomSucursal": sucursal.nom_sucursal,
-            "list_bodegas": sucursal.bodegas  # SQLAlchemy ya filtró esto por ti
+            "list_bodegas": sucursal.bodegas,
+            "documentos":documentos
         })
             
     return resultado

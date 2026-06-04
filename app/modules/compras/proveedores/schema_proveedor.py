@@ -15,7 +15,7 @@ class ProveedorBase(BaseModel):
     cod_tit: str = Field(alias="codigoTitular", max_length=50)
     razon_social: str = Field(alias="razonSocial", max_length=150)
     regimen: str = Field(alias="regimen", max_length=20)
-    activo: str = Field(alias="activo", max_length=2)
+    activo: bool = Field(alias="activo")
     observacion: str = Field(alias="observacion", max_length=250)
     fecha_mod: Optional[datetime] = Field(alias="fechaMod",default=None)
     logs: List[LogEntry]
@@ -67,10 +67,10 @@ class PaginatedProveedorResponse(BaseModel):
 
     # Esquema para paginacion
 class ProveedorPaginacion(BaseModel):
-    id_proveedor : int
-    cod_tit: str = Field(alias="codBodega", max_length=50)
-    razon_social: str = Field(alias="nomBodega", max_length=150)
-    activo: str = Field(alias="activo", max_length=2)
+    id_proveedor : int = Field(alias="idProveedor")
+    cod_tit: str = Field(alias="codTit", max_length=50)
+    razon_social: str = Field(alias="razonSocial", max_length=150)
+    activo: bool = Field(alias="activo")
     fecha_mod: Optional[datetime] = Field(alias="fechaMod",default=None)
   
 

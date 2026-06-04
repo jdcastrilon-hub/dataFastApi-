@@ -16,7 +16,7 @@ class ClienteBase(BaseModel):
     nom_cliente: str = Field(alias="nomCliente", max_length=100)
     direccion: str = Field(alias="direccion", max_length=50)
     mail: str = Field(alias="mail", max_length=50)
-    activo: str = Field(alias="activo", max_length=2)
+    activo: bool = Field(alias="activo")
     observacion: str = Field(alias="observacion", max_length=250)
     fecha_mod: Optional[datetime] = Field(alias="fechaMod",default=None)
     logs: List[LogEntry]
@@ -46,3 +46,13 @@ class PersonaBase(BaseModel):
 
 class ClienteCreate(ClienteBase):
     pass
+
+
+class ClienteSearch(BaseModel):
+    id_cliente: int = Field(alias="idCliente") 
+    id_persona: int = Field(alias="idPersona") 
+    cod_tit: str = Field(alias="codTit", max_length=20)
+    nom_cliente: str = Field(alias="nombreCompleto", max_length=80)
+
+    class Config:
+        from_attributes = True   

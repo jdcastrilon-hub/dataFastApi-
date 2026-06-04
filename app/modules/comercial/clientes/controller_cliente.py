@@ -9,6 +9,12 @@ router = APIRouter(
     prefix="/comercial/clientes",
     tags=["Comercial - Cliente"])
 
+@router.get("/clientesearch", response_model=List[schema_cliente.ClienteSearch])
+def search_articulos(
+    query: str, 
+    db: Session = Depends(get_db)):
+    return repository_cliente.find_clientes_by_query(db,query)
+
 @router.post("/save")
 def create_cliente(db_cliente: schema_cliente.ClienteCreate, db: Session = Depends(get_db)):
     """Crea un nuevo cliente y retorna el objeto con su ID generado."""
