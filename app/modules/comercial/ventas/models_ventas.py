@@ -15,7 +15,7 @@ class Factura(Base):
     id_cliente = Column(Integer, nullable=False)
     id_sucursal_emp = Column(Integer, nullable=False)
     id_sucursal_cliente = Column(Integer, nullable=False)
-    id_bodega = Column(Integer, nullable=False)
+    
     
     # Documentación
     fec_doc = Column(Date, nullable=False)
@@ -33,9 +33,13 @@ class Factura(Base):
     
     # Información Comercial
     observacion = Column(String(250), nullable=False)
+    forma_pago = Column(String(10), nullable=False)
+    imp_ingreso = Column(Numeric(14, 2), nullable=False)
+    imp_vuelto = Column(Numeric(14, 2), nullable=False)
     id_pago = Column(Integer, nullable=False)
     fec_venc = Column(Date, nullable=False)
     id_moneda = Column(Integer, nullable=False)
+    id_bodega = Column(Integer, nullable=False)
     id_estado = Column(Integer, nullable=False)
     vista = Column(String(16), nullable=False)
     signo = Column(Integer, nullable=False)
@@ -78,6 +82,7 @@ class FacturaDetalle(Base):
     id_codbarra = Column(Integer, nullable=False)
     precio_unit = Column(Numeric(14, 2), nullable=False)
     cantidad = Column(Integer, nullable=False)
+    stock = Column(Integer, nullable=False)
     id_lote = Column(Integer, nullable=False)
     tipo_vta = Column(String(2), nullable=False)
     

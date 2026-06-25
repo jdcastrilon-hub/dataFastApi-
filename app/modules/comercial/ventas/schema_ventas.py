@@ -23,6 +23,9 @@ class VentaBase(BaseModel):
     secuencia :  str = Field(alias="secuencia", max_length=20)   
     id_bodega: int = Field(alias="idBodega")
     id_estado: int= Field(alias="idEstado")
+    forma_pago:  str = Field(alias="formaPago", max_length=10)
+    imp_ingreso: Decimal= Field(alias="impIgreso")
+    imp_vuelto: Decimal= Field(alias="impVuelto")
     id_pago : int= Field(alias="idPago")
     fec_venc : datetime = Field(alias="fecVenc")
     imp_neto : Decimal= Field(alias="impNeto")
@@ -55,8 +58,9 @@ class DetalleVenta(BaseModel):
     id_articulo: int = Field(alias="idArticulo") 
     id_codbarra: int = Field(alias="idCodBarra") 
     ref_compras:str = Field(alias="refCompras", max_length=100)
-    costo_unit: Decimal= Field(alias="costoUnit")
+    precio_unit : Decimal= Field(alias="precio")
     cantidad: int = Field(alias="cantidad")
+    stock: int = Field(alias="stock")
     id_lote: int = Field(alias="idLote")
     stock: int = Field(alias="stock")
     porc_dcto: Decimal = Field(alias="porcDcto")
@@ -70,8 +74,7 @@ class DetalleVenta(BaseModel):
     impuesto3 : str = Field(alias="impuesto3", max_length=6)
     id_tasaimp3 : int = Field(alias="idTasaimp3")
     valor_impuesto3 : Decimal= Field(alias="valorImpuesto3")
-    costo_total : Decimal= Field(alias="costoTotal")
-    importe : Decimal= Field(alias="importeTotal")
+    imp_total : Decimal= Field(alias="importeTotal")
 
     model_config = ConfigDict(
     from_attributes=True,  

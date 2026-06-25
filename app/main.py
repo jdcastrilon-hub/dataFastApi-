@@ -28,6 +28,9 @@ from app.modules.compras.monitorcompras.controller_monitor import router as moni
 from app.modules.compras.ajustecostos.controller_ajustecosto import router as ajusteCostos
 from app.modules.comercial.clientes.controller_cliente import router as cliente
 from app.modules.comercial.ventas.controller_ventas import router as ventas
+from app.modules.comercial.mediopago.controller_medio import router as mediopagos
+from app.modules.comercial.cajas.controller_cajas import router as cajas
+from app.modules.comercial.turnos.controller_turno import router as turno
 from app.core.Services.ServiceInicializacion.controller_serviciosIni import router as serviciosini
 from fastapi.middleware.cors import CORSMiddleware
  
@@ -84,3 +87,6 @@ app.include_router(monitorstock)
 app.include_router(ajusteCostos)
 app.include_router(cliente)
 app.include_router(ventas)
+app.include_router(mediopagos)
+app.include_router(cajas)
+app.include_router(turno)

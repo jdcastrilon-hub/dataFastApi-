@@ -25,3 +25,5 @@ class Sucursal(Base):
     bodegas = relationship("Bodega", back_populates="sucursal")
 
     empresa =relationship("Empresa", back_populates="sucursales")
+
+    caja = relationship("MCaja", back_populates="sucursal") 

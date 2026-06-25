@@ -23,3 +23,7 @@ def list_sucursales(page: int = 0, size: int = 100, db: Session = Depends(get_db
 @router.get("/comboBybodegas", response_model=List[schema_sucursal.SucursalListComboByBodegas])
 def list_sucursales_With_Bodegas(id_empresa: int ,db: Session = Depends(get_db)):
     return repository_sucursal.get_sucursales_by_bodegas(db, id_empresa=id_empresa)
+
+@router.get("/comboBycajas", response_model=List[schema_sucursal.SucursalListComboByCajas])
+def list_sucursales_With_Bodegas(id_empresa: int ,db: Session = Depends(get_db)):
+    return repository_sucursal.get_sucursales_by_cajas(db, id_empresa=id_empresa)

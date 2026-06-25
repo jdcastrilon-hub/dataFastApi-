@@ -30,6 +30,9 @@ def create_venta(db: Session, obj: schema_ventas.ventaCreate, nro_docum : int) :
             serie_remito="",     
 
             observacion = obj.observacion,     
+            forma_pago = obj.forma_pago,  
+            imp_ingreso = obj.imp_ingreso,  
+            imp_vuelto = obj.imp_vuelto,  
             id_pago=1,
             fec_venc= obj.fec_doc,   
             id_moneda=1,       
@@ -55,6 +58,10 @@ def create_venta(db: Session, obj: schema_ventas.ventaCreate, nro_docum : int) :
         db.add(bd_venta)
         db.flush() 
 
+         # Insertar Detalles
+        _procesar_detalles(db, bd_venta.id_trans,bd_venta.id_emp, obj)        
+        db.flush() # Envio a base de datos
+
         
         db.commit()
         db.refresh(bd_venta)
@@ -64,3 +71,38 @@ def create_venta(db: Session, obj: schema_ventas.ventaCreate, nro_docum : int) :
         db.rollback() # ¡Fundamental! Deshace todo si algo falla
         raise HTTPException(status_code=400, detail=f"Error al crear la venta: {str(e)}")
     
+
+
+
+def _procesar_detalles(db: Session, id_trans: int,id_emp: str, obj: schema_ventas.ventaCreate):
+        """
+        Método privado para procesar e insertar detalles de venta
+        Reutilizado en Creación y Edición.
+        """
+        for i,det in enumerate(obj.detalles, start=1):
+            de_detalles = models_ventas.FacturaDetalle(     
+                id_emp = id_emp,       
+                id_trans = id_trans,            
+                linea=i, #Numerador de linea
+                #campos
+                id_articulo = det.id_articulo,
+                id_codbarra  = det.id_codbarra,
+                precio_unit = det.precio_unit,
+                cantidad  = det.cantidad,
+                id_lote = det.id_lote,
+                tipo_vta = "V",
+                stock = det.stock,
+                porc_dcto = det.porc_dcto,
+                imp_dcto = det.imp_dcto,
+                impuesto1 = det.impuesto1,
+                id_tasaimp1 = det.id_tasaimp1,
+                valor_impuesto1 = det.valor_impuesto1,
+                impuesto2 = det.impuesto2,
+                id_tasaimp2 = det.id_tasaimp2,
+                valor_impuesto2 = det.valor_impuesto2,
+                impuesto3 = det.impuesto3,
+                id_tasaimp3 = det.id_tasaimp3,
+                valor_impuesto3 = det.valor_impuesto3,
+                imp_total = det.imp_total
+            )
+            db.add(de_detalles)
