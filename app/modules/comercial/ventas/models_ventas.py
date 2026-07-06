@@ -37,6 +37,7 @@ class Factura(Base):
     imp_ingreso = Column(Numeric(14, 2), nullable=False)
     imp_vuelto = Column(Numeric(14, 2), nullable=False)
     id_pago = Column(Integer, nullable=False)
+    id_turno = Column(Integer, nullable=False)
     fec_venc = Column(Date, nullable=False)
     id_moneda = Column(Integer, nullable=False)
     id_bodega = Column(Integer, nullable=False)
@@ -102,6 +103,7 @@ class FacturaDetalle(Base):
     # Descuentos y Totales por Línea
     porc_dcto = Column(String(62), nullable=False)
     imp_dcto = Column(Numeric(14, 2), nullable=False)
+    imp_neto= Column(Numeric(14, 2), nullable=False)
     imp_total = Column(Numeric(14, 2), nullable=False)
 
     

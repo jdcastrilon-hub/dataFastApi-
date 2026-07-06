@@ -2,11 +2,21 @@ from sqlalchemy import desc, text
 from sqlalchemy.orm import Session
 from . import model_bodega, schema_bodega
 
+# Máximo de entradas de auditoría que se conservan en el jsonb "logs".
+# Se aplica aquí (y no solo en el frontend) para que quede garantizado sin
+# importar quién envíe el request.
+MAX_LOGS_AUDITORIA = 10
+
+def _limitar_logs(logs):
+    if not logs:
+        return logs
+    return logs[-MAX_LOGS_AUDITORIA:]
+
 # Obtener todas las bodegas ordenadas de mayor a menor
 def get_bodegas(db: Session, skip: int = 0, limit: int = 100):
     return db.query(model_bodega.Bodega).order_by(desc(model_bodega.Bodega.fecha_mod)).offset(skip).limit(limit).all()
 
-# Obtener todas las bodegas 
+# Obtener todas las bodegas
 def get_bodegas_combo(db: Session):
     return db.query(model_bodega.Bodega).all()
 
@@ -17,8 +27,10 @@ def get_bodega(db: Session, bodega_id: int):
 # Crear una bodega
 def create_bodega(db: Session, bodega: schema_bodega.BodegaCreate):
     # Convertimos el schema a un diccionario y lo pasamos al modelo
-    db_bodega = model_bodega.Bodega(**bodega.model_dump())
-    
+    data = bodega.model_dump()
+    data["logs"] = _limitar_logs(data.get("logs"))
+    db_bodega = model_bodega.Bodega(**data)
+
     db.add(db_bodega)
     db.commit()
     db.refresh(db_bodega) # Aquí se recupera el ID generado por el autonumérico
@@ -28,10 +40,11 @@ def create_bodega(db: Session, bodega: schema_bodega.BodegaCreate):
 def update_bodega(db: Session, bodega_id: int, bodega_data: schema_bodega.BodegaCreate):
     db_query = db.query(model_bodega.Bodega).filter(model_bodega.Bodega.id == bodega_id)
     db_bodega = db_query.first()
-    
+
     if db_bodega:
         # Actualizamos los campos dinámicamente
         update_data = bodega_data.model_dump()
+        update_data["logs"] = _limitar_logs(update_data.get("logs"))
         db_query.update(update_data, synchronize_session=False)
         db.commit()
         db.refresh(db_bodega)

@@ -10,7 +10,7 @@ class Compra(Base):
     # Usamos BigInteger para id_trans y vinculamos la secuencia 'id_transaccion'
     id_trans = Column(BigInteger, Sequence('id_transaccion'), primary_key=True, index=True)
     
-    id_emp = Column(Integer, ForeignKey("public.m_empresa.id_emp"), nullable=False)
+    id_emp = Column(Integer, ForeignKey("public.md_empresas.id_emp"), nullable=False)
     id_proveedor = Column(Integer, ForeignKey("public.m_proveedores.id_proveedor"), nullable=False)
     
     fec_doc = Column(Date, nullable=False)
@@ -42,7 +42,7 @@ class Compra(Base):
     logs = Column(JSON, nullable=True)
 
     # Relaciones
-    empresa = relationship("Empresa", back_populates="proveedores")
+    empresa = relationship("Empresa", back_populates="compras")
     proveedor = relationship("Proveedor" , back_populates="compras")
     bodega = relationship(
     "Bodega", 

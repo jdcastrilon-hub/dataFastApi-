@@ -1,10 +1,10 @@
-from sqlalchemy import Column, Integer, String, JSON, DateTime
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, PrimaryKeyConstraint, String, JSON, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
 
 class Empresa(Base):
-    __tablename__ = "m_empresa"
+    __tablename__ = "md_empresas"
     __table_args__ = {'schema': 'public'}
 
     # Definición de columnas basadas en tu script SQL
@@ -26,9 +26,20 @@ class Empresa(Base):
 
     # Relacion de Negocio -> Empresa
     negocios = relationship("Negocio", back_populates="empresa")
-    proveedores = relationship("Compra", back_populates="empresa")
+    compras = relationship("Compra", back_populates="empresa")
+    proveedor = relationship("Proveedor", back_populates="empresa")
     sucursales = relationship("Sucursal", back_populates="empresa")
+    usuarios = relationship("EmpresaXUser", back_populates="empresa")
 
-    #ToString
-    def __repr__(self):
-        return f"<Empresa(nom_emp='{self.nom_emp}', nit='{self.nit}')>"
+class EmpresaXUser(Base):
+    __tablename__ = 'md_empresaxuser'
+    __table_args__ = (
+        PrimaryKeyConstraint('id_usuario', 'id_emp', name='md_empresaxuser_pkey'),
+        {'schema': 'public'}  # Opcional: define el esquema si es necesario
+    )
+
+    id_usuario = Column(Integer, ForeignKey('public.md_usuarios.id_usuario', onupdate='NO ACTION', ondelete='NO ACTION'), nullable=False)
+    id_emp = Column(Integer, ForeignKey('public.md_empresas.id_emp', onupdate='NO ACTION', ondelete='NO ACTION'), nullable=False)
+    activo = Column(Boolean, default=True)
+
+    empresa = relationship("Empresa", back_populates="usuarios")

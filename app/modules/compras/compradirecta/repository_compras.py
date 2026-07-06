@@ -1,6 +1,8 @@
 from fastapi import HTTPException
 from sqlalchemy import desc, text
 from sqlalchemy.orm import Session , joinedload
+
+from app.exceptions import TransaccionValidationError
 from . import models, schema_compras 
 
 #Paginacion
@@ -121,7 +123,13 @@ def create_compra(db: Session, obj: schema_compras.CompraCreate, nro_docum : int
             db.execute(
                 text("CALL public.sp_compradirecta(:operacion,:parm_trans)"), 
                 {"operacion": "N", "parm_trans": bd_compra.id_trans}
-            )   
+            ) 
+
+            #Control de transaccion
+            db.execute(
+                text("CALL public.sp_general_control_transacciones(:parm_trans)"), 
+                {"parm_trans": bd_compra.id_trans}
+            )     
         
         db.commit()
         db.refresh(bd_compra)
@@ -129,7 +137,7 @@ def create_compra(db: Session, obj: schema_compras.CompraCreate, nro_docum : int
 
     except Exception as e:
         db.rollback() # ¡Fundamental! Deshace todo si algo falla
-        raise HTTPException(status_code=400, detail=f"Error al crear la compra: {str(e)}")
+        raise TransaccionValidationError(str(e.orig))
     
 # Actualizar Compra
 def update_compra(db: Session, id_trans: int, obj: schema_compras.CompraCreate):

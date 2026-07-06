@@ -19,6 +19,8 @@ from app.modules.stock.monitorstock.controller_monitor import router as monitors
 from app.modules.core.empresas.controller_empresa import router as empresas
 from app.modules.core.negocios.controller_negocio import router as negocios
 from app.modules.core.ciudades.controller_ciudades import router as ciudad
+from app.modules.core.menus.controller_menu import router as menus
+from app.modules.core.usuarios.controller_usuario import router as usuarios
 from app.modules.impuestos.impuesto.controller_impuesto import router as impuestos
 from app.modules.compras.documentos.controller_documentos import router as tipodoc
 from app.modules.compras.personas.controller_personas import router as persona
@@ -32,6 +34,7 @@ from app.modules.comercial.mediopago.controller_medio import router as mediopago
 from app.modules.comercial.cajas.controller_cajas import router as cajas
 from app.modules.comercial.turnos.controller_turno import router as turno
 from app.core.Services.ServiceInicializacion.controller_serviciosIni import router as serviciosini
+from app.core.auth.controller_auth import router as inicioSesion
 from fastapi.middleware.cors import CORSMiddleware
  
 app = FastAPI(title="Mi ERP API")
@@ -90,3 +93,6 @@ app.include_router(ventas)
 app.include_router(mediopagos)
 app.include_router(cajas)
 app.include_router(turno)
+app.include_router(menus)
+app.include_router(usuarios)
+app.include_router(inicioSesion)

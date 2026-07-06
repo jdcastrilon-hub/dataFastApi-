@@ -5,6 +5,8 @@ from typing import List
 from app.database import get_db
 from . import repository_compras, schema_compras
 from app.core.Services.ServiceInicializacion import repository_serviciosIni
+from app.modules.core.usuarios import model_usuario
+from app.core.auth import security
 
 router = APIRouter(
     prefix="/compras/compradirecta",
@@ -12,7 +14,7 @@ router = APIRouter(
 
 #Buscar Compras por ID
 @router.get("/search", response_model=schema_compras.CompraBase)
-def obtener_compra(transaccion: int, db: Session = Depends(get_db)):
+def obtener_compra(transaccion: int, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
     """Busca una compra específica x ID."""
     bd_compra = repository_compras.get_compras_by_id(db, transaccion=transaccion)
     if bd_compra is None:
@@ -20,15 +22,16 @@ def obtener_compra(transaccion: int, db: Session = Depends(get_db)):
     return bd_compra
 
 @router.get("/pagination", response_model=schema_compras.PaginatedCompraResponse)
-def list_bodegas_paginacion(  
+def list_bodegas_paginacion(
     page: int = Query(0, ge=0),
     size: int = Query(10, ge=1),
     idempresa : int =0,
-    db: Session = Depends(get_db)):
+    db: Session = Depends(get_db),
+    usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
     return repository_compras.get_compras_paginated(db, page, size,idempresa)
 
 @router.post("/save")
-def crear_compra(compra: schema_compras.CompraCreate, db: Session = Depends(get_db)):
+def crear_compra(compra: schema_compras.CompraCreate, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
     """Crea una nueva compra y retorna el objeto con su ID generado."""
     try:
         result=repository_serviciosIni.NumeradorNextReal(db,"id_nrodocum_compra")
@@ -51,7 +54,7 @@ def crear_compra(compra: schema_compras.CompraCreate, db: Session = Depends(get_
         )
 
 @router.put("/edit/{id_trans}")
-def crear_compra(id_trans: int,compra: schema_compras.CompraCreate, db: Session = Depends(get_db)):
+def crear_compra(id_trans: int,compra: schema_compras.CompraCreate, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
     """Editar una compra y retorna el objeto con su ID generado."""
     try:
         repository_compras.update_compra(db=db,id_trans=id_trans, obj=compra)
@@ -72,5 +75,5 @@ def crear_compra(id_trans: int,compra: schema_compras.CompraCreate, db: Session 
         )    
 
 @router.get("/stock-masivo", response_model=List[schema_compras.CompraActualizacionDatos])
-def get_stock_masivo(cadena: str, id_bodega: int, id_estado: int, db: Session = Depends(get_db)):
+def get_stock_masivo(cadena: str, id_bodega: int, id_estado: int, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
     return repository_compras.consultar_stock_lote(db, cadena, id_bodega, id_estado)  

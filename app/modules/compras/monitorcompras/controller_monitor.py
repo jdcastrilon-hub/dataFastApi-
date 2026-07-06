@@ -6,13 +6,15 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.database import get_db
 from . import repository_monitor, schema_monitor
+from app.modules.core.usuarios import model_usuario
+from app.core.auth import security
 
 router = APIRouter(
     prefix="/compras/monitor",
     tags=["compras - Monitor"])
 
 @router.get("/filtros", response_model=schema_monitor.filtrosgenerales)
-def filtros(id_empresa: int,db: Session = Depends(get_db)):
+def filtros(id_empresa: int,db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
 
     data = repository_monitor.get_filtros(db,id_empresa)
     
@@ -32,8 +34,9 @@ def get_monitorcomprasrealizadas_data(
     articulo: Optional[int] = 0,
     page: int = Query(0, ge=0),
     size: int = Query(10, ge=1),
-    db: Session = Depends(get_db)
-):  
+    db: Session = Depends(get_db),
+    usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)
+):
     print ("get_monitorcomprasrealizadas_data")
     print(fechainicial)
     return repository_monitor.get_monitorcomprasrealizadas_data(db, fechainicial, fechafinal,id_bodega,id_proveedor,articulo,page,size)
@@ -47,7 +50,8 @@ def get_monitorcomprasrealizadas_data(
     subcategoria : int,
     page: int = Query(0, ge=0),
     size: int = Query(10, ge=1),
-    db: Session = Depends(get_db)
-):  
+    db: Session = Depends(get_db),
+    usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)
+):
     print ("get_monitorcomprasrealizadas_data")
     return repository_monitor.get_costos(db, bodega, negocio,categoria,subcategoria,page,size)

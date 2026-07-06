@@ -6,13 +6,15 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.database import get_db
 from . import repository_monitor, schema_monitor
+from app.modules.core.usuarios import model_usuario
+from app.core.auth import security
 
 router = APIRouter(
     prefix="/bodega/monitor",
     tags=["Bodega - Monitor"])
 
 @router.get("/filtrovista1", response_model=schema_monitor.filtrosgeneralesxempresa)
-def filtrosvista1(id_empresa: int,db: Session = Depends(get_db)):
+def filtrosvista1(id_empresa: int,db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
 
     data = repository_monitor.get_filtros_vista_inventario(db,id_empresa)
     
@@ -32,7 +34,8 @@ def get_monitorcomprasrealizadas_data(
     subcategoria : int,
     page: int = Query(0, ge=0),
     size: int = Query(10, ge=1),
-    db: Session = Depends(get_db)
-):  
+    db: Session = Depends(get_db),
+    usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)
+):
     print ("get_monitorcomprasrealizadas_data")
     return repository_monitor.get_monitorinventario_data(db, bodega, negocio,categoria,subcategoria,page,size)

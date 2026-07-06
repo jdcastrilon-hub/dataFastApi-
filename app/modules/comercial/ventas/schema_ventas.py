@@ -23,6 +23,7 @@ class VentaBase(BaseModel):
     secuencia :  str = Field(alias="secuencia", max_length=20)   
     id_bodega: int = Field(alias="idBodega")
     id_estado: int= Field(alias="idEstado")
+    id_turno: int= Field(alias="idTurno")
     forma_pago:  str = Field(alias="formaPago", max_length=10)
     imp_ingreso: Decimal= Field(alias="impIgreso")
     imp_vuelto: Decimal= Field(alias="impVuelto")
@@ -74,6 +75,7 @@ class DetalleVenta(BaseModel):
     impuesto3 : str = Field(alias="impuesto3", max_length=6)
     id_tasaimp3 : int = Field(alias="idTasaimp3")
     valor_impuesto3 : Decimal= Field(alias="valorImpuesto3")
+    imp_neto : Decimal= Field(alias="neto")
     imp_total : Decimal= Field(alias="importeTotal")
 
     model_config = ConfigDict(

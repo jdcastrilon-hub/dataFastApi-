@@ -5,13 +5,15 @@ from typing import List
 from app.database import get_db
 from . import repository_trasladoStock, schema_trasladoStock
 from app.core.Services.ServiceInicializacion import repository_serviciosIni
+from app.modules.core.usuarios import model_usuario
+from app.core.auth import security
 
 router = APIRouter(
     prefix="/bodega/trasladobodega",
     tags=["Stock - Traslado"])
 
 @router.post("/save")
-def crear_ajuste(traslado: schema_trasladoStock.TrasladoStockCreate, db: Session = Depends(get_db)):
+def crear_ajuste(traslado: schema_trasladoStock.TrasladoStockCreate, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
     """Crea una nueva bodega y retorna el objeto con su ID generado."""
     try:
         result=repository_serviciosIni.NumeradorNextReal(db,"id_nrodocum_trasladobodega")

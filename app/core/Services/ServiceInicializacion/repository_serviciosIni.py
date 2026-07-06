@@ -29,7 +29,7 @@ def get_compra_disponible(db: Session, id_articulo: int,id_codbarra: int, bodega
                 s.costo AS "costo"
             FROM comprasdisponiblexbodega(:param_articulo_id, :param_id_codbarra, :param_bodega_id, :param_estado_id, :param_id_proveedor) AS s
         """)
-        
+
         # Ejecutamos con los parámetros
         result = db.execute(query, {
             "param_articulo_id" :id_articulo,

@@ -40,6 +40,7 @@ class CajaCreate(CajaBase):
 
 # Esquema para combos en la pagina Web
 class CajaCombo(BaseModel):
+    id : int = Field(alias="idCaja")
     cod_caja: str = Field(alias="codCaja", max_length=15)
     nom_caja: str = Field(alias="nomCaja", max_length=100)
 

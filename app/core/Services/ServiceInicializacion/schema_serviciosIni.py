@@ -8,7 +8,7 @@ class NumeradorResponse(BaseModel):
     next_value: int
 
 # Esquema Compra Disponible
-class StockDisponibleResponse(BaseModel):
+class StockDisponibleCompraResponse(BaseModel):
     stock: int
     costo: Decimal
 

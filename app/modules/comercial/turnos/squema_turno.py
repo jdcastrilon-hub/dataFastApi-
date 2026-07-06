@@ -17,6 +17,7 @@ class TurnoBase(BaseModel):
     status: bool = Field(alias="status")
     imp_base :  Decimal= Field(alias="impBase")
     usuario :  str = Field(alias="usuario", max_length=16)
+    observacion : str = Field(alias="Observacion", max_length=100)
     fecha_mod: Optional[datetime] = Field(alias="fechaMod",default=None)
     logs: List[LogEntry]
 
@@ -30,6 +31,7 @@ class TurnoCreate(TurnoBase):
 
 class ValidacionTurno(BaseModel):
     tieneturno : bool = Field(alias="tieneturno")
+    id_sucursal_emp: int = Field(alias="idSucursal")
     id_turno : int = Field(alias="idTurno")
     fec_doc: datetime = Field(alias="Fecha")
     #datos de caja abierta.
@@ -49,6 +51,15 @@ class Clienteturno(BaseModel):
     id_persona: Optional[int] = Field(None, alias="idPersona")
     cod_tit: str = Field(alias="codTit", max_length=50)
     nom_cliente: str = Field(alias="nombreCompleto", max_length=100)
+    
+    model_config = ConfigDict(
+    from_attributes=True,  
+    populate_by_name=True)
+
+class UltimaCajaxuser(BaseModel):
+    id_turno : int = Field(alias="idturno")
+    fec_doc: date = Field(alias="fecha")
+    estado :str = Field(alias="estado",max_length=10)
     
     model_config = ConfigDict(
     from_attributes=True,  

@@ -1,6 +1,8 @@
 from fastapi import HTTPException
 from sqlalchemy import desc, text
 from sqlalchemy.orm import Session , joinedload
+
+from app.exceptions import TransaccionValidationError
 from . import models_ventas, schema_ventas 
 
 
@@ -27,7 +29,8 @@ def create_venta(db: Session, obj: schema_ventas.ventaCreate, nro_docum : int) :
             serie_ref="",              
             documento_remito="",            
             nro_remito=0,            
-            serie_remito="",     
+            serie_remito="", 
+            id_turno=obj.id_turno,    
 
             observacion = obj.observacion,     
             forma_pago = obj.forma_pago,  
@@ -62,6 +65,17 @@ def create_venta(db: Session, obj: schema_ventas.ventaCreate, nro_docum : int) :
         _procesar_detalles(db, bd_venta.id_trans,bd_venta.id_emp, obj)        
         db.flush() # Envio a base de datos
 
+        db.execute(
+                text("CALL public.sp_comercial_ventapos(:operacion,:parm_trans)"), 
+                {"operacion": "N", "parm_trans": bd_venta.id_trans}
+            ) 
+
+        #Control de transaccion
+        db.execute(
+                text("CALL public.sp_general_control_transacciones(:parm_trans)"), 
+                {"parm_trans": bd_venta.id_trans}
+            )     
+
         
         db.commit()
         db.refresh(bd_venta)
@@ -69,7 +83,7 @@ def create_venta(db: Session, obj: schema_ventas.ventaCreate, nro_docum : int) :
 
     except Exception as e:
         db.rollback() # ¡Fundamental! Deshace todo si algo falla
-        raise HTTPException(status_code=400, detail=f"Error al crear la venta: {str(e)}")
+        raise TransaccionValidationError(str(e.orig))
     
 
 
@@ -103,6 +117,7 @@ def _procesar_detalles(db: Session, id_trans: int,id_emp: str, obj: schema_venta
                 impuesto3 = det.impuesto3,
                 id_tasaimp3 = det.id_tasaimp3,
                 valor_impuesto3 = det.valor_impuesto3,
+                imp_neto=obj.imp_neto,
                 imp_total = det.imp_total
             )
             db.add(de_detalles)

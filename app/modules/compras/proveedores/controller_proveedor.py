@@ -4,26 +4,30 @@ from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
 from . import repository_proveedor, schema_proveedor
+from app.modules.core.usuarios import model_usuario
+from app.core.auth import security
 
 router = APIRouter(
     prefix="/compras/proveedor",
     tags=["Compras - Proveedor"])
 
 @router.get("/pagination", response_model=schema_proveedor.PaginatedProveedorResponse)
-def list_bodegas_paginacion(  
+def list_bodegas_paginacion(
     page: int = Query(0, ge=0),
     size: int = Query(10, ge=1),
-    db: Session = Depends(get_db)):
+    db: Session = Depends(get_db),
+    usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
     return repository_proveedor.get_proveedor_paginated(db, page, size)
 
 @router.get("/proveedorsearch", response_model=List[schema_proveedor.ProveedorSearch])
 def search_articulos(
-    query: str, 
-    db: Session = Depends(get_db)):
+    query: str,
+    db: Session = Depends(get_db),
+    usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
     return repository_proveedor.find_proveedores_by_query(db,query)
 
 @router.post("/save")
-def create_proveedor(db_proveedor: schema_proveedor.ProveedorCreate, db: Session = Depends(get_db)):
+def create_proveedor(db_proveedor: schema_proveedor.ProveedorCreate, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
     """Crea un nuevo proveedor y retorna el objeto con su ID generado."""
     try:
         repository_proveedor.create_proveedor(db=db, obj=db_proveedor)

@@ -7,6 +7,10 @@ def get_personas(db: Session):
     return db.query(modelo_personas.Persona).all()
 
 
+def get_persona(db: Session, id_persona: int):
+    return db.query(modelo_personas.Persona).filter(modelo_personas.Persona.id_persona == id_persona).first()
+
+
 def find_persona_by_query(db: Session, query: str):
         # Creamos el patrón para el LIKE: %query%
         search_filter = f"%{query}%"

@@ -7,15 +7,17 @@ from . import model_turno, squema_turno
 from app.modules.comercial.clientes import model_cliente
 from app.modules.comercial.mediopago import model_medio
 
-def create_turno(db: Session, obj: squema_turno.TurnoCreate):
+def create_turno(db: Session, obj: squema_turno.TurnoCreate, nro_docum : int):
 
     # Convertimos la lista de objetos LogEntry a una lista de diccionarios
     logs_dict = [log.model_dump() for log in obj.logs]
     # 1. Crear el objeto principal
     db_turno = model_turno.TAbrirTurno(
+        id=nro_docum,
         id_caja=obj.id_caja,
         fec_doc=obj.fec_doc,
         imp_base=obj.imp_base,
+        observacion=obj.observacion,
         status=obj.status,
         usuario=obj.usuario,
         logs=logs_dict,
@@ -45,6 +47,7 @@ def validar_turnoxusuario(db: Session, usuario: str):
             "idTurno": turno.id,      # Cambia 'id' por el nombre exacto de tu columna (ej: id_caja) si aplica
             "fec_doc": turno.fec_doc,
               # Datos que vienen desde la relación 'caja'
+            "idSucursal" : turno.caja.id_sucursal_emp,
             "idBodega": turno.caja.id_bodega,
             "idEstado": turno.caja.id_estado,
             "documento": turno.caja.documento,
@@ -57,22 +60,41 @@ def validar_turnoxusuario(db: Session, usuario: str):
                 },
             "mediopago":mediopago
         }
-    
-    # 3. Si no existe, retornamos valores por defecto seguros
-    return {
-        "tieneturno": False,
-        "idTurno": 0,
-        "fec_doc": "1990-01-01",
-        # Datos que vienen desde la relación 'caja'
-        "idBodega": 0,
-        "idEstado": 0,
-        "documento": "",
-        "nomCaja":"",
-        "cliente" : {
-                 "idCliente": 0,
-                 "idPersona": 0,
-                 "codTit": "",
-                 "nombreCompleto": ""
-                },
-        "mediopago":mediopago
-    }
+    else:
+        # 3. Si no existe, retornamos valores por defecto seguros
+        return {
+            "tieneturno": False,
+            "idTurno": 0,
+            "fec_doc": "1990-01-01",
+            # Datos que vienen desde la relación 'caja'
+            "idSucursal" : 0,
+            "idBodega": 0,
+            "idEstado": 0,
+            "documento": "",
+            "nomCaja":"",
+            "cliente" : {
+                    "idCliente": 0,
+                    "idPersona": 0,
+                    "codTit": "",
+                    "nombreCompleto": ""
+                    },
+            "mediopago":mediopago
+        }
+
+def validar_ultimaCaja(db: Session, usuario: str):
+    # Definimos el query nativo llamando a la función
+    query = text("""
+            SELECT 
+                s.idturno as idturno,
+                s.fecha,
+                s.estado 
+            FROM comercial_turnos_UltimaCaja(:param_usuario) AS s
+    """)
+        
+    # Ejecutamos con los parámetros
+    result = db.execute(query, {
+            "param_usuario": usuario
+    })
+        
+    # Convertimos los resultados a diccionarios para que Pydantic los valide
+    return result.mappings().first()

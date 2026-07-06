@@ -5,20 +5,23 @@ from typing import List
 from app.database import get_db
 from . import repository_ajusteStock, schema_ajusteStock
 from app.core.Services.ServiceInicializacion import repository_serviciosIni
+from app.modules.core.usuarios import model_usuario
+from app.core.auth import security
 
 router = APIRouter(
     prefix="/bodega/ajustestock",
     tags=["Stock - AjusteStock"])
 
 @router.get("/pagination", response_model=schema_ajusteStock.PaginatedAjusteResponse)
-def list_bodegas_paginacion(  
+def list_bodegas_paginacion(
     page: int = Query(0, ge=0),
     size: int = Query(10, ge=1),
-    db: Session = Depends(get_db)):
+    db: Session = Depends(get_db),
+    usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
     return repository_ajusteStock.get_ajustes_paginated(db, page, size)
 
 @router.get("/search", response_model=schema_ajusteStock.AjusteStockBase)
-def obtener_bodega(id_trans: int, db: Session = Depends(get_db)):
+def obtener_bodega(id_trans: int, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
     """Busca un ajuste específica x ID."""
     db_ajuste = repository_ajusteStock.get_ajustestock(db, id_trans=id_trans)
     if db_ajuste is None:
@@ -26,7 +29,7 @@ def obtener_bodega(id_trans: int, db: Session = Depends(get_db)):
     return db_ajuste
 
 @router.post("/save")
-def crear_ajuste(ajustestock: schema_ajusteStock.AjusteStockCreate, db: Session = Depends(get_db)):
+def crear_ajuste(ajustestock: schema_ajusteStock.AjusteStockCreate, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
     """Crea una nueva bodega y retorna el objeto con su ID generado."""
     try:
         result=repository_serviciosIni.NumeradorNextReal(db,"id_nrodocum_ajustestock")
