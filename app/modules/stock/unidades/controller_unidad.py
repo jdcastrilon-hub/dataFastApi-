@@ -19,9 +19,10 @@ def listar_unidades(db: Session = Depends(get_db), usuario_autenticado: model_us
 def list_unidades_paginacion(
     page: int = Query(0, ge=0),
     size: int = Query(10, ge=1),
+    texto: str = Query(None),
     db: Session = Depends(get_db),
     usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
-    return repository_unidad.get_unidades_paginated(db, page, size)
+    return repository_unidad.get_unidades_paginated(db, page, size, texto)
 
 @router.get("/search", response_model=schema_unidad.UnidadResponse)
 def obtener_unidad(unidad_id: int, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):

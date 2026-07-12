@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field, Json, model_validator
 from typing import List, Optional, Dict, Any
-from datetime import datetime
+from datetime import date, datetime
 
 #Esquema para leer la varaiable Logs
 class LogEntry(BaseModel):
@@ -10,8 +10,10 @@ class LogEntry(BaseModel):
 
 # Esquema Lista
 class ArticulosBase(BaseModel): 
-    id_articulo: Optional[int] = Field(alias="id_articulo") 
-    cod_articulo: str = Field(alias="codArticulo", max_length=30)
+    id_articulo: Optional[int] = Field(alias="id_articulo")
+    # Se autogenera desde el numerador de la empresa (ver CODIGO_NUMERADOR_ARTICULO);
+    # opcional porque el formulario ya no lo tiene que enviar.
+    cod_articulo: Optional[str] = Field(None, alias="codArticulo", max_length=30)
     nom_articulo: str = Field(alias="nomArticulo", max_length=100)    
     id_negocio: int = Field(alias="idNegocio") 
     id_categoria: int = Field(alias="idCategoria") 
@@ -21,8 +23,9 @@ class ArticulosBase(BaseModel):
     id_impuesto: int = Field(alias="idImpuesto") 
     id_ref: int = Field(alias="idRef")     
     activo_stock: bool = Field(alias="activoStock")
-    stock_min: Optional[int]  = Field(alias="stockMin") 
-    stock_max: Optional[int]  = Field(alias="stockMax")     
+    maneja_lote: bool = Field(False, alias="manejaLote")
+    stock_min: Optional[int]  = Field(alias="stockMin")
+    stock_max: Optional[int]  = Field(alias="stockMax")
     grupo_contable: str = Field(alias="grupoContable", max_length=20)
     cta_inventario: Optional[str]  = Field(alias="cuentaInventario", max_length=15)
     fecha_mod: Optional[datetime] = Field(alias="fechaMod",default=None)
@@ -99,18 +102,20 @@ class Unidad(BaseModel):
     )
 
 class ArticuloSearchCodigoBarra(BaseModel):
-    id_articulo: int = Field(alias="idArticulo") 
-    id_codbarra: int = Field(alias="idCodBarra") 
+    id_articulo: int = Field(alias="idArticulo")
+    id_codbarra: int = Field(alias="idCodBarra")
     cod_articulo: str = Field(alias="codArticulo", max_length=20)
     nom_articulo: str = Field(alias="nomArticulo", max_length=80)
+    maneja_lote: bool = Field(False, alias="manejaLote")
 
     class Config:
         from_attributes = True
 
 class ArticuloSearchCodigoStock(BaseModel):
-    id_articulo: int = Field(alias="idArticulo") 
+    id_articulo: int = Field(alias="idArticulo")
     cod_articulo: str = Field(alias="codArticulo", max_length=20)
     nom_articulo: str = Field(alias="nomArticulo", max_length=80)
+    maneja_lote: bool = Field(False, alias="manejaLote")
 
     class Config:
         from_attributes = True
@@ -137,7 +142,8 @@ class ArticuloPaginacion(BaseModel):
     cod_articulo: str = Field(alias="codArticulo")
     nom_articulo: str = Field(alias="nomArticulo")
     activo_stock: bool = Field(alias="activoStock")
-    
+    maneja_lote: bool = Field(False, alias="manejaLote")
+
     # Campos aplanados
     nom_subcategoria: str = Field(alias="nomSubCategoria")
     nom_categoria: str = Field(alias="nomCategoria")
@@ -169,8 +175,29 @@ class ArticuloPaginacion(BaseModel):
 
         return data
     
+class LoteDisponible(BaseModel):
+    id_lote: int = Field(alias="idLote")
+    codigo_lote: str = Field(alias="codigoLote")
+    fec_vencimiento: Optional[date] = Field(None, alias="fecVencimiento")
+    cantidad: float = Field(alias="cantidad")
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True
+    )
+
+class LoteReservado(BaseModel):
+    id_articulo: int = Field(alias="idArticulo")
+    id_lote: int = Field(alias="idLote")
+    existe: bool = Field(alias="existe")
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True
+    )
+
 # Esquema para actualizacion masiva de stock
-class ArticuloActualizacionDatos(BaseModel):    
+class ArticuloActualizacionDatos(BaseModel):
     idcodbarra: int
     stock: int
     movimientos: int

@@ -25,9 +25,10 @@ def listar_empresas( db: Session = Depends(get_db), usuario_autenticado: model_u
 def list_bodegas_paginacion(
     page: int = Query(0, ge=0),
     size: int = Query(10, ge=1),
+    texto: str = Query(None),
     db: Session = Depends(get_db),
     usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
-    return repository_articulos.get_articulos_paginated(db, page, size)
+    return repository_articulos.get_articulos_paginated(db, page, size, texto)
 
 @router.get("/search", response_model=schema_articulos.ArticulosBase)
 def obtener_bodega(id_articulo: int, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
@@ -61,6 +62,15 @@ def existe_barra(id_articulo: int, cod_barra: str, db: Session = Depends(get_db)
 @router.get("/stock-masivo", response_model=List[schema_articulos.ArticuloActualizacionDatos])
 def get_stock_masivo(id_articulo: int,cadena: str,db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
     return repository_articulos.consultar_stock_codigosbarra(db, cadena, id_articulo)
+
+@router.get("/lotes", response_model=List[schema_articulos.LoteDisponible])
+def get_lotes_articulo(id_articulo: int, id_emp: int, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
+    return repository_articulos.get_lotes_articulo(db, id_articulo, id_emp)
+
+#Reserva un id de lote (nextval) sin insertar en m_lotes; se materializa al guardar la transaccion que lo usa.
+@router.get("/lotes/reservar", response_model=schema_articulos.LoteReservado)
+def reservar_lote(id_articulo: int, codigo_lote: str, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
+    return repository_articulos.reservar_id_lote(db, id_articulo, codigo_lote)
 
 @router.post("/save")
 def save_articulo(articulo: schema_articulos.ArticuloCreate, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):

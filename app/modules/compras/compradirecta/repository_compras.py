@@ -1,29 +1,58 @@
 from fastapi import HTTPException
-from sqlalchemy import desc, text
+from sqlalchemy import String, cast, desc, or_, text
+from sqlalchemy.exc import DataError, IntegrityError
 from sqlalchemy.orm import Session , joinedload
 
 from app.exceptions import TransaccionValidationError
-from . import models, schema_compras 
+from app.modules.compras.proveedores import model_proveedor
+from app.core.numeradores import repository_numerador
+from . import models, schema_compras
+
+# Codigo del numerador (por empresa) que identifica el consecutivo de nroDocum
+CODIGO_NUMERADOR_COMPRA = "COMPRA"
+
+def _siguiente_nro_docum(db: Session, id_emp: int, nro_docum_manual):
+    """Asigna el nroDocum desde el numerador de la empresa (compras ya trae id_emp
+    directo en la cabecera, a diferencia de ajustestock/trasladobodega que lo
+    resuelven vía bodega -> sucursal). Si esa empresa tiene "requiere_consecutivo"
+    en False, respeta lo enviado desde el formulario."""
+    siguiente = repository_numerador.siguiente_numerador(db, id_emp, CODIGO_NUMERADOR_COMPRA)
+    return siguiente if siguiente is not None else nro_docum_manual
 
 #Paginacion
-def get_compras_paginated(db: Session, page: int, size: int,idempresa: int):
-    # 1. Contar el total de registros en la tabla
-    total_records = db.query(models.Compra).count()
-    
+def get_compras_paginated(db: Session, page: int, size: int, idempresa: int, texto: str = None):
+    query = db.query(models.Compra).filter(models.Compra.id_emp == idempresa)
+
+    # Filtro de busqueda por documento, remito o nombre del proveedor (si el usuario escribio algo)
+    if texto:
+        patron = f"%{texto}%"
+        query = query\
+            .join(models.Compra.proveedor)\
+            .filter(
+                or_(
+                    models.Compra.remito.ilike(patron),
+                    cast(models.Compra.nro_docum, String).ilike(patron),
+                    model_proveedor.Proveedor.razon_social.ilike(patron)
+                )
+            )
+
+    # 1. Contar el total de registros que cumplen el filtro
+    total_records = query.count()
+
     # 2. Obtener los registros de la página actual
     offset = page * size
-    items = db.query(models.Compra)\
-    .filter(models.Compra.id_emp == idempresa)\
-    .options(
-        joinedload(models.Compra.proveedor), 
-        joinedload(models.Compra.bodega))\
-    .offset(offset)\
-    .limit(size)\
-    .all()
-    
+    items = query\
+        .options(
+            joinedload(models.Compra.proveedor),
+            joinedload(models.Compra.bodega))\
+        .order_by(desc(models.Compra.fecha_mod))\
+        .offset(offset)\
+        .limit(size)\
+        .all()
+
     # 3. Calcular total de páginas
     total_pages = (total_records + size - 1) // size
-    
+
     return {
         "content": items,
         "totalElements": total_records,
@@ -32,11 +61,12 @@ def get_compras_paginated(db: Session, page: int, size: int,idempresa: int):
         "size": size
     }
 
-# Obtener una compra por ID 
+# Obtener una compra por ID
 def get_compras_by_id(db: Session, transaccion: int):
     return db.query(models.Compra).filter(models.Compra.id_trans == transaccion).options(
                     joinedload(models.Compra.bodega),
                     joinedload(models.Compra.nuevoCodigoBarra),
+                    joinedload(models.Compra.nuevoLote),
                     joinedload(models.Compra.detalles)
                     .joinedload(models.DetalleCompra.articulo)).first()
 
@@ -80,13 +110,16 @@ def consultar_stock_lote(db: Session, cadena: str, id_bodega: int, id_estado: in
         return []
 
 #Crear compras
-def create_compra(db: Session, obj: schema_compras.CompraCreate, nro_docum : int) :
+def create_compra(db: Session, obj: schema_compras.CompraCreate) :
     try:
         # Convertimos la lista de objetos LogEntry a una lista de diccionarios
         logs_dict = [log.model_dump() for log in obj.logs]
+        #Capturamos numerador para la compra directa
+        nro_docum = _siguiente_nro_docum(db, obj.id_emp, obj.nro_docum)
         # 1. Crear el objeto principal
         bd_compra = models.Compra(
             id_emp=obj.id_emp,
+            id_sucursal=obj.id_sucursal,
             id_proveedor=obj.id_proveedor,
             fec_doc =obj.fec_doc,
             documento=obj.documento,
@@ -135,10 +168,19 @@ def create_compra(db: Session, obj: schema_compras.CompraCreate, nro_docum : int
         db.refresh(bd_compra)
         return bd_compra
 
+    except (IntegrityError, DataError):
+        # No se envuelve: se deja que el manejador global responda con el mensaje
+        # amigable específico (ej. remito duplicado para el mismo proveedor/empresa,
+        # restricción UNIQUE (id_emp, id_proveedor, remito) ya existente en la BD).
+        db.rollback()
+        raise
     except Exception as e:
+        # Lo que llega aquí son errores de negocio lanzados por los SPs (ej.
+        # sp_general_control_stock haciendo RAISE EXCEPTION 'ERR_VAL: ...'), no
+        # violaciones de integridad — esos ya se filtraron arriba.
         db.rollback() # ¡Fundamental! Deshace todo si algo falla
         raise TransaccionValidationError(str(e.orig))
-    
+
 # Actualizar Compra
 def update_compra(db: Session, id_trans: int, obj: schema_compras.CompraCreate):
     try:
@@ -150,6 +192,7 @@ def update_compra(db: Session, id_trans: int, obj: schema_compras.CompraCreate):
         # 2. Actualizar el objeto principal (Cabezal)
         # Seteamos los valores nuevos sobre el objeto recuperado
         bd_compra.id_proveedor = obj.id_proveedor
+        bd_compra.id_sucursal = obj.id_sucursal
         bd_compra.fec_doc = obj.fec_doc
         bd_compra.remito = obj.remito
         bd_compra.status = obj.status
@@ -169,7 +212,8 @@ def update_compra(db: Session, id_trans: int, obj: schema_compras.CompraCreate):
         # 3. LIMPIEZA DE TABLAS HIJAS (Borrar para reinsertar)
         # ---------------------------------------------------------
         db.query(models.DetalleCompra).filter(models.DetalleCompra.id_trans == id_trans).delete()
-        db.query(models.DetalleCompraNuevoCodigoBarra).filter(models.DetalleCompraNuevoCodigoBarra.id_trans == id_trans).delete()        
+        db.query(models.DetalleCompraNuevoCodigoBarra).filter(models.DetalleCompraNuevoCodigoBarra.id_trans == id_trans).delete()
+        db.query(models.DetalleCompraNuevoLote).filter(models.DetalleCompraNuevoLote.id_trans == id_trans).delete()
         db.flush() # Ejecuta los deletes pero mantiene la transacción abierta
        
         # Insertar Detalles
@@ -188,10 +232,39 @@ def update_compra(db: Session, id_trans: int, obj: schema_compras.CompraCreate):
         db.refresh(bd_compra)
         return bd_compra
 
+    except HTTPException:
+        # "Compra no encontrada" (404) lanzada arriba: se deja pasar tal cual, no se
+        # reenvuelve como un 400 generico.
+        raise
+    except (IntegrityError, DataError):
+        # Mismo motivo que en create_compra: se deja que el manejador global de
+        # errores de integridad responda con el mensaje amigable especifico.
+        db.rollback()
+        raise
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=f"Error al editar la compra: {str(e)}")    
-    
+        raise HTTPException(status_code=400, detail=f"Error al editar la compra: {str(e)}")
+
+# Eliminar una compra. Si estaba finalizada ('F'), su impacto en stock/costos ya fue
+# materializado por sp_compradirecta (p_stock/p_costos) y ese SP no tiene modo "reversa",
+# asi que hay que revertirlo a mano antes de borrar (mismo patron que ajustestock/trasladobodega).
+# Los codigos de barra que el SP ya haya materializado en m_artxcodigobarra NO se tocan:
+# quedan como parte del catalogo, la compra que los origino ya no es lo que los sostiene.
+def delete_compra(db: Session, id_trans: int):
+    bd_compra = db.query(models.Compra).filter(models.Compra.id_trans == id_trans).first()
+    if not bd_compra:
+        return None
+
+    try:
+        db.execute(text("DELETE FROM public.p_stock WHERE id_trans=:parm_trans"), {"parm_trans": id_trans})
+        db.execute(text("DELETE FROM public.p_costos WHERE id_trans=:parm_trans"), {"parm_trans": id_trans})
+
+        db.delete(bd_compra)  # cascade borra detalles (td_compras) y nuevoCodigoBarra (td_comprasnewcodbarra)
+        db.commit()
+        return bd_compra
+    except Exception:
+        db.rollback()
+        raise
 
 def _procesar_detalles_y_codigos(db: Session, id_trans: int, obj: schema_compras.CompraCreate):
         """
@@ -229,7 +302,7 @@ def _procesar_detalles_y_codigos(db: Session, id_trans: int, obj: schema_compras
 
         # 3. Crear nuevos codigos de barra si es necesario
         for i,newcodigos in enumerate(obj.nuevoCodigoBarra, start=1):
-            de_detalle_nuevoscodigos = models.DetalleCompraNuevoCodigoBarra( 
+            de_detalle_nuevoscodigos = models.DetalleCompraNuevoCodigoBarra(
                 id_trans = id_trans,
                 id_articulo = newcodigos.id_articulo,
                 id_codbarra = newcodigos.id_codbarra,
@@ -239,3 +312,15 @@ def _procesar_detalles_y_codigos(db: Session, id_trans: int, obj: schema_compras
                 ref_barra=newcodigos.ref_barra
             )
             db.add(de_detalle_nuevoscodigos)
+
+        # 4. Staging de lotes nuevos: aun no existen en m_lotes, el SP los crea
+        # como parte del mismo commit (ver sp_compradirecta).
+        for i, lote in enumerate(obj.nuevos_lotes, start=1):
+            db.add(models.DetalleCompraNuevoLote(
+                id_trans=id_trans,
+                id_articulo=lote.id_articulo,
+                id_lote=lote.id_lote,
+                linea=i,
+                codigo_lote=lote.codigo_lote,
+                fec_vencimiento=lote.fec_vencimiento
+            ))

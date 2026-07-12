@@ -11,8 +11,9 @@ class Compra(Base):
     id_trans = Column(BigInteger, Sequence('id_transaccion'), primary_key=True, index=True)
     
     id_emp = Column(Integer, ForeignKey("public.md_empresas.id_emp"), nullable=False)
+    id_sucursal = Column(Integer, ForeignKey("public.m_sucursales.id"), nullable=False)
     id_proveedor = Column(Integer, ForeignKey("public.m_proveedores.id_proveedor"), nullable=False)
-    
+
     fec_doc = Column(Date, nullable=False)
     documento = Column(String(16), nullable=False)
     nro_docum = Column(Integer, nullable=False)
@@ -53,6 +54,7 @@ class Compra(Base):
     # Relación para cargar detalle automáticamente
     detalles = relationship("DetalleCompra", back_populates="parent", cascade="all, delete-orphan")
     nuevoCodigoBarra = relationship("DetalleCompraNuevoCodigoBarra", back_populates="parent", cascade="all, delete-orphan")
+    nuevoLote = relationship("DetalleCompraNuevoLote", back_populates="parent", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Compra(id_trans={self.id_trans}, nro_docum={self.nro_docum}, proveedor={self.id_proveedor})>"
@@ -120,3 +122,22 @@ class DetalleCompraNuevoCodigoBarra(Base):
     ref_barra = Column(String(100), nullable=False)
 
     parent = relationship("Compra", back_populates="nuevoCodigoBarra")
+
+class DetalleCompraNuevoLote(Base):
+    """
+    Staging de lotes nuevos (aun no existen en m_lotes) creados durante la carga
+    de una compra. Solo se materializan en m_lotes cuando se guarda la compra
+    finalizada (ver sp_compradirecta) - mismo patron que td_ajustestocknuevolote.
+    """
+    __tablename__ = "td_comprasnuevolote"
+    __table_args__ = {"schema": "public"}
+
+    id_trans = Column(BigInteger, ForeignKey("public.t_compras.id_trans"), primary_key=True)
+    id_articulo = Column(Integer, primary_key=True)
+    id_lote = Column(Integer, primary_key=True)
+    linea = Column(Integer, nullable=False)
+
+    codigo_lote = Column(String(50), nullable=False)
+    fec_vencimiento = Column(Date, nullable=False)
+
+    parent = relationship("Compra", back_populates="nuevoLote")

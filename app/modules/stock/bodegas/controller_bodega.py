@@ -29,9 +29,10 @@ def listar_bodegas(db: Session = Depends(get_db), usuario_autenticado: model_usu
 def list_bodegas_paginacion(
     page: int = Query(0, ge=0),
     size: int = Query(10, ge=1),
+    texto: str = Query(None),
     db: Session = Depends(get_db),
     usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
-    return repository_bodega.get_bodegas_paginated(db, page, size)
+    return repository_bodega.get_bodegas_paginated(db, page, size, texto)
 
 @router.get("/search", response_model=schema_bodega.BodegaResponse)
 def obtener_bodega(bodega_id: int, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):

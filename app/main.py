@@ -39,8 +39,13 @@ from fastapi.middleware.cors import CORSMiddleware
  
 app = FastAPI(title="Mi ERP API")
 
+#URL de entrada permitida
+origins = [
+    "http://localhost:4200",
+]
+
 # exeptiones del sistema
-add_exception_handlers(app)
+add_exception_handlers(app, allowed_origins=origins)
 
 # Registrar los módulos (Como si fueran Controllers en Spring)
 #app.include_router(stock_router)
@@ -49,11 +54,6 @@ add_exception_handlers(app)
 @app.get("/")
 def health_check():
     return {"status": "ok"}
-
-#URL de entrada permitida
-origins = [
-    "http://localhost:4200",
-]
 
 app.add_middleware(
     CORSMiddleware,

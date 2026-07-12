@@ -6,7 +6,8 @@ class AjusteStock(Base):
     __tablename__ = "t_ajustestock"
 
     id_trans = Column(BigInteger,Sequence('id_transaccion'), primary_key=True, index=True)
-    id_bodega = Column(Integer,ForeignKey("m_bodegas.id"), nullable=False) 
+    id_emp = Column(Integer, nullable=False)
+    id_bodega = Column(Integer,ForeignKey("m_bodegas.id"), nullable=False)
     documento = Column(String(10), nullable=False)
     nro_docum = Column(Integer, nullable=False)
     id_calculo = Column(Integer, nullable=False)
@@ -41,8 +42,25 @@ class DetalleAjusteStock(Base):
 
     cabecera = relationship("AjusteStock", back_populates="detalles")
     articulo = relationship(
-    "CodigosBarra", 
+    "CodigosBarra",
     back_populates="ajustes",
     primaryjoin="DetalleAjusteStock.id_codbarra == CodigosBarra.id_codbarra",
     foreign_keys=[id_codbarra]
-    ) 
+    )
+
+class DetalleAjusteStockNuevoLote(Base):
+    """
+    Staging de lotes nuevos (aun no existen en m_lotes) creados durante la edicion
+    de un ajuste de stock. Solo se materializan en m_lotes cuando se guarda el
+    ajuste (ver sp_stock_impacto_ajustestock) - si el usuario cancela antes de
+    guardar, nunca se toco m_lotes.
+    """
+    __tablename__ = "td_ajustestocknuevolote"
+
+    id_trans = Column(BigInteger, ForeignKey("t_ajustestock.id_trans"), primary_key=True)
+    id_articulo = Column(Integer, primary_key=True)
+    id_lote = Column(Integer, primary_key=True)
+    linea = Column(Integer, nullable=False)
+
+    codigo_lote = Column(String(50), nullable=False)
+    fec_vencimiento = Column(Date, nullable=False)

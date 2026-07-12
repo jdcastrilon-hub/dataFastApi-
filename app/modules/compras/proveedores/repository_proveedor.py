@@ -1,24 +1,50 @@
 from sqlalchemy import desc, or_
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from . import model_proveedor , schema_proveedor
 from app.modules.compras.personas import modelo_personas
 
-# Obtener todas las bodegas ordenadas de mayor a menor
-def get_proveedor(db: Session):
+# Máximo de entradas de auditoría que se conservan en el jsonb "logs".
+MAX_LOGS_AUDITORIA = 10
+
+def _limitar_logs(logs):
+    if not logs:
+        return logs
+    return logs[-MAX_LOGS_AUDITORIA:]
+
+# Obtener todos los proveedores
+def get_proveedores(db: Session):
     return db.query(model_proveedor.Proveedor).all()
 
+# Obtener un proveedor por ID (con la persona asociada, para ver/editar)
+def get_proveedor(db: Session, proveedor_id: int):
+    return db.query(model_proveedor.Proveedor)\
+        .options(joinedload(model_proveedor.Proveedor.persona))\
+        .filter(model_proveedor.Proveedor.id_proveedor == proveedor_id).first()
+
 #Paginacion
-def get_proveedor_paginated(db: Session, page: int, size: int):
-    # 1. Contar el total de registros en la tabla
-    total_records = db.query(model_proveedor.Proveedor).count()
-    
+def get_proveedor_paginated(db: Session, page: int, size: int, texto: str = None):
+    query = db.query(model_proveedor.Proveedor)
+
+    # Filtro de busqueda por documento o razon social (si el usuario escribio algo)
+    if texto:
+        patron = f"%{texto}%"
+        query = query.filter(
+            or_(
+                model_proveedor.Proveedor.cod_tit.ilike(patron),
+                model_proveedor.Proveedor.razon_social.ilike(patron)
+            )
+        )
+
+    # 1. Contar el total de registros que cumplen el filtro
+    total_records = query.count()
+
     # 2. Obtener los registros de la página actual
     offset = page * size
-    items = db.query(model_proveedor.Proveedor).order_by(desc(model_proveedor.Proveedor.fecha_mod)).offset(offset).limit(size).all()
-    
+    items = query.order_by(desc(model_proveedor.Proveedor.fecha_mod)).offset(offset).limit(size).all()
+
     # 3. Calcular total de páginas
     total_pages = (total_records + size - 1) // size
-    
+
     return {
         "content": items,
         "totalElements": total_records,
@@ -54,7 +80,7 @@ def find_proveedores_by_query(db: Session, query: str):
 def create_proveedor(db: Session, obj: schema_proveedor.ProveedorCreate):
     try:
         # Convertimos la lista de objetos LogEntry a una lista de diccionarios
-        logs_dict = [log.model_dump() for log in obj.logs]
+        logs_dict = _limitar_logs([log.model_dump() for log in obj.logs])
         # Inicializamos la variable que contendrá el ID de la persona definitiva
         persona_id_final = obj.id_persona
 
@@ -99,7 +125,58 @@ def create_proveedor(db: Session, obj: schema_proveedor.ProveedorCreate):
         db.refresh(bd_proveedor)
 
         return bd_proveedor
-    
+
     except Exception as e:
-            db.rollback() 
-            raise e      
+            db.rollback()
+            raise e
+
+# Actualizar un proveedor existente. Tambien actualiza los datos propios de la
+# persona ligada (no se permite reasignar a otra persona desde aqui, solo corregir
+# los datos de la que ya esta ligada): al no existir todavia un maestro de personas
+# dedicado, esta es la unica pantalla donde se pueden corregir esos datos.
+def update_proveedor(db: Session, proveedor_id: int, obj: schema_proveedor.ProveedorCreate):
+    db_query = db.query(model_proveedor.Proveedor).filter(model_proveedor.Proveedor.id_proveedor == proveedor_id)
+    db_proveedor = db_query.first()
+
+    if db_proveedor:
+        logs_dict = _limitar_logs([log.model_dump() for log in obj.logs])
+        db_query.update({
+            "cod_tit": obj.cod_tit,
+            "razon_social": obj.razon_social,
+            "regimen": obj.regimen,
+            "activo": obj.activo,
+            "observacion": obj.observacion,
+            "logs": logs_dict,
+            "fecha_mod": obj.fecha_mod
+        }, synchronize_session=False)
+
+        if obj.persona:
+            db.query(modelo_personas.Persona)\
+                .filter(modelo_personas.Persona.id_persona == db_proveedor.id_persona)\
+                .update({
+                    "id_tipodoc": obj.persona.id_tipodoc,
+                    "cod_tit": obj.persona.cod_tit,
+                    "nombres": obj.persona.nombres,
+                    "apellidos": obj.persona.apellidos,
+                    "nombre_completo": obj.persona.nombre_completo,
+                    "sexo": obj.persona.sexo,
+                    "fec_nacimiento": obj.persona.fec_nacimiento,
+                    "direccion": obj.persona.direccion,
+                    "telefono": obj.persona.telefono,
+                    "mail": obj.persona.mail,
+                    "id_ciudad": obj.persona.id_ciudad,
+                    "fecha_mod": obj.fecha_mod
+                }, synchronize_session=False)
+
+        db.commit()
+        db.refresh(db_proveedor)
+    return db_proveedor
+
+# Eliminar un proveedor (la persona asociada se conserva, puede seguir referenciada
+# por compras historicas o reutilizarse en clientes/empleados)
+def delete_proveedor(db: Session, proveedor_id: int):
+    db_proveedor = db.query(model_proveedor.Proveedor).filter(model_proveedor.Proveedor.id_proveedor == proveedor_id).first()
+    if db_proveedor:
+        db.delete(db_proveedor)
+        db.commit()
+    return db_proveedor

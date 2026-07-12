@@ -40,6 +40,22 @@ class MonitorComprasRealizadas(BaseModel):
     class Config:
         from_attributes = True
 
+class DetalleCompraLinea(BaseModel):
+    cod_barra: str
+    nom_articulo: str
+    codigo_lote: Optional[str] = None
+    costo: Decimal
+    cantidad: int
+    neto: Decimal
+    porc_dcto: Decimal
+    importe_dcto: Decimal
+    porc_iva: Decimal
+    importe_iva: Decimal
+    total: Decimal
+
+    class Config:
+        from_attributes = True
+
 # ****************************************************** INICIO Reporte Costos
 # Modelo principal de respuesta del Monitor
 class MonitorCosto(BaseModel):

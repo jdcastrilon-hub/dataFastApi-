@@ -1,10 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, status,Query
-from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
 from . import repository_ajusteStock, schema_ajusteStock
-from app.core.Services.ServiceInicializacion import repository_serviciosIni
 from app.modules.core.usuarios import model_usuario
 from app.core.auth import security
 
@@ -16,9 +14,10 @@ router = APIRouter(
 def list_bodegas_paginacion(
     page: int = Query(0, ge=0),
     size: int = Query(10, ge=1),
+    texto: str = Query(None),
     db: Session = Depends(get_db),
     usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
-    return repository_ajusteStock.get_ajustes_paginated(db, page, size)
+    return repository_ajusteStock.get_ajustes_paginated(db, page, size, texto)
 
 @router.get("/search", response_model=schema_ajusteStock.AjusteStockBase)
 def obtener_bodega(id_trans: int, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
@@ -30,23 +29,34 @@ def obtener_bodega(id_trans: int, db: Session = Depends(get_db), usuario_autenti
 
 @router.post("/save")
 def crear_ajuste(ajustestock: schema_ajusteStock.AjusteStockCreate, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
-    """Crea una nueva bodega y retorna el objeto con su ID generado."""
-    try:
-        result=repository_serviciosIni.NumeradorNextReal(db,"id_nrodocum_ajustestock")
-        print(result)
-        repository_ajusteStock.create_ajustestock(db=db, obj=ajustestock, nro_docum=result)
-        return {
-            "status": "success",
-            "message": "ajuste creada exitosamente",
-            "data": None  # Omites el objeto completo para ahorrar recursos
-        }
-    except Exception as e:
-        # Aquí devuelves un error controlado, por ejemplo 400 (Bad Request)
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "status": "error",
-                "message": f"Error al guardar: {str(e)}",
-                "data": None
-            }
-        )
+    """Crea un nuevo ajuste de stock y retorna el objeto con su ID generado.
+    No se atrapa la excepción aquí a propósito: así los errores de integridad
+    los resuelve el manejador global de IntegrityError con un mensaje amigable,
+    en una sola llamada (el nroDocum también se asigna server-side, sin una
+    llamada aparte al numerador)."""
+    repository_ajusteStock.create_ajustestock(db=db, obj=ajustestock)
+    return {
+        "status": "success",
+        "message": "ajuste creada exitosamente",
+        "data": None  # Omites el objeto completo para ahorrar recursos
+    }
+
+@router.put("/edit")
+def actualizar_ajuste(id_trans: int, ajustestock: schema_ajusteStock.AjusteStockCreate, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
+    """Actualiza un ajuste de stock existente (recalcula el impacto en el stock)."""
+    db_ajuste = repository_ajusteStock.update_ajustestock(db, id_trans=id_trans, obj=ajustestock)
+    if db_ajuste is None:
+        raise HTTPException(status_code=404, detail="Ajuste no encontrado")
+    return {
+        "status": "success",
+        "message": "Ajuste editado exitosamente",
+        "data": None
+    }
+
+@router.delete("/delete", status_code=status.HTTP_204_NO_CONTENT)
+def eliminar_ajuste(id_trans: int, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
+    """Elimina un ajuste de stock del sistema (revierte su impacto en el stock)."""
+    success = repository_ajusteStock.delete_ajustestock(db, id_trans=id_trans)
+    if not success:
+        raise HTTPException(status_code=404, detail="Ajuste no encontrado")
+    return None

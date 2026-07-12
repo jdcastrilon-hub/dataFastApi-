@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 from datetime import date, datetime
 from typing import List, Optional, Any
+from app.modules.compras.personas import schema_personas
 
 #Esquema para leer la varaiable Logs
 class LogEntry(BaseModel):
@@ -45,6 +46,25 @@ class PersonaBase(BaseModel):
 
 class ProveedorCreate(ProveedorBase):
     pass
+
+
+# Esquema para la respuesta (lo que devuelve /search, usado en ver/editar)
+class ProveedorResponse(BaseModel):
+    id_emp: int = Field(alias="idEmp")
+    id_proveedor: int = Field(alias="idProveedor")
+    id_persona: int = Field(alias="idPersona")
+    cod_tit: str = Field(alias="codigoTitular", max_length=50)
+    razon_social: str = Field(alias="razonSocial", max_length=150)
+    regimen: str = Field(alias="regimen", max_length=20)
+    activo: bool = Field(alias="activo")
+    observacion: str = Field(alias="observacion", max_length=250)
+    fecha_mod: Optional[datetime] = Field(alias="fechaMod", default=None)
+    logs: List[LogEntry]
+    persona: schema_personas.PersonaDetalle
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True)
 
 
 class ProveedorSearch(BaseModel):

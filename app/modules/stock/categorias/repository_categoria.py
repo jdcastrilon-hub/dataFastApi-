@@ -1,7 +1,15 @@
 from fastapi import HTTPException
-from sqlalchemy import desc, text
+from sqlalchemy import desc, or_, text
 from sqlalchemy.orm import Session , joinedload
 from . import models, schema_categoria
+
+# Máximo de entradas de auditoría que se conservan en el jsonb "logs".
+MAX_LOGS_AUDITORIA = 10
+
+def _limitar_logs(logs):
+    if not logs:
+        return logs
+    return logs[-MAX_LOGS_AUDITORIA:]
 
 
 def get_categorias(db: Session, skip: int = 0, limit: int = 100):
@@ -22,7 +30,7 @@ def get_categoriaByID(db: Session, categoria_id: int):
 def create_categoria(db: Session, cat: schema_categoria.CategoriaCreate):
 
     # Convertimos la lista de objetos LogEntry a una lista de diccionarios
-    logs_dict = [log.model_dump() for log in cat.logs]
+    logs_dict = _limitar_logs([log.model_dump() for log in cat.logs])
     # 1. Crear el objeto principal
     db_categoria = models.Categoria(
         id_emp=cat.id_emp,
@@ -50,19 +58,19 @@ def create_categoria(db: Session, cat: schema_categoria.CategoriaCreate):
 
 # Actualizar Categoria
 def update_categoria(db: Session, id_categoria: int, obj : schema_categoria.CategoriaCreate):
+    # 1. Buscar la categoria existente
+    bd_categoria = db.query(models.Categoria).filter(models.Categoria.id == id_categoria).first()
+    if not bd_categoria:
+        raise HTTPException(status_code=404, detail="Categroia no encontrado")
+
     try:
-        # 1. Buscar la categoria existente
-        bd_categoria = db.query(models.Categoria).filter(models.Categoria.id == id_categoria).first()
-        if not bd_categoria:
-            raise HTTPException(status_code=404, detail="Categroia no encontrado")
-        
          # Seteamos los valores nuevos sobre el objeto recuperado
         bd_categoria.cod_categoria = obj.cod_categoria
         bd_categoria.nom_categoria = obj.nom_categoria
         bd_categoria.estado = obj.estado
-       
-    
-        bd_categoria.logs = [log.model_dump() for log in obj.logs]
+
+
+        bd_categoria.logs = _limitar_logs([log.model_dump() for log in obj.logs])
         bd_categoria.fecha_mod = obj.fecha_mod
 
          # 2. Crear las subcategorias model
@@ -89,13 +97,28 @@ def update_categoria(db: Session, id_categoria: int, obj : schema_categoria.Cate
         db.commit()
         db.refresh(bd_categoria)
         return bd_categoria
-        
-    except Exception as e:
+
+    except HTTPException:
+        raise
+    except Exception:
+        # Se conserva el rollback (varios pasos antes del commit final), pero se
+        # relanza la excepción original en vez de envolverla en un mensaje crudo: así
+        # el manejador global (IntegrityError/DataError) responde con un mensaje amigable.
         db.rollback()
-        raise HTTPException(status_code=400, detail=f"Error al editar la categoria: {str(e)}")  
-    
+        raise
+
 def delete_categoria(db: Session, id_categoria: int):
-        # 1. Borramos los hijos primero
+    # 1. Buscamos la categoria para confirmar que existe
+    bd_categoria = db.query(models.Categoria).filter(
+        models.Categoria.id == id_categoria
+    ).first()
+
+    if not bd_categoria:
+        # Si no existe, no hay nada que borrar
+        return None
+
+    try:
+        # 2. Borramos los hijos primero
         db.query(models.Subcategoria).filter(
             models.Subcategoria.categoria_id == id_categoria
         ).delete()
@@ -103,33 +126,43 @@ def delete_categoria(db: Session, id_categoria: int):
         db.query(models.SubcategoriaModel).filter(
             models.SubcategoriaModel.categoria_id == id_categoria
         ).delete()
-        
-        # 2. Buscamos el artículo para confirmar que existe y retornarlo
-        bd_categoria = db.query(models.Categoria).filter(
-            models.Categoria.id == id_categoria
-        ).first()
-
-        if not bd_categoria:
-            # Si no existe, no hay nada que borrar
-            return None 
 
         # 3. Borramos el padre
         db.delete(bd_categoria)
-        
+
         # 4. Guardamos cambios
         db.commit()
-        
-        return bd_categoria    
+
+        return bd_categoria
+
+    except Exception:
+        # Se conserva el rollback (borrado en varios pasos), pero se relanza la
+        # excepción original para que el manejador global de IntegrityError la
+        # convierta en el mensaje de "registro en uso en otro módulo".
+        db.rollback()
+        raise
 
 #Paginacion
-def get_bodegas_paginated(db: Session, page: int, size: int):
-    # 1. Contar el total de registros en la tabla
-    total_records = db.query(models.Categoria).count()
-    
+def get_bodegas_paginated(db: Session, page: int, size: int, texto: str = None):
+    query = db.query(models.Categoria)
+
+    # Filtro de busqueda por codigo o nombre (si el usuario escribio algo)
+    if texto:
+        patron = f"%{texto}%"
+        query = query.filter(
+            or_(
+                models.Categoria.cod_categoria.ilike(patron),
+                models.Categoria.nom_categoria.ilike(patron)
+            )
+        )
+
+    # 1. Contar el total de registros que cumplen el filtro
+    total_records = query.count()
+
     # 2. Obtener los registros de la página actual
     offset = page * size
-    items = db.query(models.Categoria).order_by(desc(models.Categoria.fecha_mod)).offset(offset).limit(size).all()
-    
+    items = query.order_by(desc(models.Categoria.fecha_mod)).offset(offset).limit(size).all()
+
     # 3. Calcular total de páginas
     total_pages = (total_records + size - 1) // size
     

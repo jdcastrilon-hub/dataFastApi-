@@ -1,4 +1,4 @@
-from sqlalchemy import desc
+from sqlalchemy import desc, or_
 from sqlalchemy.orm import Session , joinedload
 from . import model_unidad
 
@@ -53,13 +53,25 @@ def delete_unidad(db: Session, unidad_id: int):
     return db_unidad
 
 #Paginacion
-def get_unidades_paginated(db: Session, page: int, size: int):
-    # 1. Contar el total de registros en la tabla
-    total_records = db.query(model_unidad.Unidad).count()
+def get_unidades_paginated(db: Session, page: int, size: int, texto: str = None):
+    query = db.query(model_unidad.Unidad)
+
+    # Filtro de busqueda por codigo o nombre (si el usuario escribio algo)
+    if texto:
+        patron = f"%{texto}%"
+        query = query.filter(
+            or_(
+                model_unidad.Unidad.cod_unidad.ilike(patron),
+                model_unidad.Unidad.nom_unidad.ilike(patron)
+            )
+        )
+
+    # 1. Contar el total de registros que cumplen el filtro
+    total_records = query.count()
 
     # 2. Obtener los registros de la página actual
     offset = page * size
-    items = db.query(model_unidad.Unidad).order_by(desc(model_unidad.Unidad.fecha_mod)).offset(offset).limit(size).all()
+    items = query.order_by(desc(model_unidad.Unidad.fecha_mod)).offset(offset).limit(size).all()
 
     # 3. Calcular total de páginas
     total_pages = (total_records + size - 1) // size

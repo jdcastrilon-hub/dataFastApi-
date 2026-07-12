@@ -7,14 +7,15 @@ class TrasladoStock(Base):
     __tablename__ = "t_trasladobodega"
 
     id_trans = Column(BigInteger,Sequence('id_transaccion'), primary_key=True, index=True)
-    id_bodega_origen = Column(Integer, nullable=False)
-    id_bodega_destino = Column(Integer, nullable=False)
+    id_emp = Column(Integer, nullable=False)
+    id_bodega_origen = Column(Integer, ForeignKey("m_bodegas.id"), nullable=False)
+    id_bodega_destino = Column(Integer, ForeignKey("m_bodegas.id"), nullable=False)
     documento = Column(String(10), nullable=False)
     nro_docum = Column(Integer, nullable=False)
     id_calculo = Column(Integer, nullable=False)
     fecha_movimiento = Column(Date, nullable=False)
-    id_estado_origen = Column(Integer, nullable=False)
-    id_estado_destino = Column(Integer, nullable=False)
+    id_estado_origen = Column(Integer, ForeignKey("public.m_estados.id"), nullable=False)
+    id_estado_destino = Column(Integer, ForeignKey("public.m_estados.id"), nullable=False)
     observacion = Column(String(250))
     vista = Column(String(16), nullable=False)
     fecha_mod = Column(DateTime, nullable=False)
@@ -22,6 +23,11 @@ class TrasladoStock(Base):
 
     # Relación con el detalle
     detalles = relationship("DetalleTrasladoStock", back_populates="cabecera")
+    # relaciones
+    bodega_origen = relationship("Bodega", foreign_keys=[id_bodega_origen], back_populates="traslados_origen")
+    bodega_destino = relationship("Bodega", foreign_keys=[id_bodega_destino], back_populates="traslados_destino")
+    estado_origen = relationship("Estado", foreign_keys=[id_estado_origen], back_populates="traslados_origen")
+    estado_destino = relationship("Estado", foreign_keys=[id_estado_destino], back_populates="traslados_destino")
 
 
 
@@ -31,11 +37,18 @@ class DetalleTrasladoStock(Base):
     # Definición de Llave Compuesta
     id_trans = Column(BigInteger, ForeignKey("t_trasladobodega.id_trans"), primary_key=True)
     id_articulo = Column(Integer, primary_key=True)
+    id_codbarra = Column(Integer, ForeignKey("public.m_artxcodigobarra.id_codbarra"), primary_key=True)
     linea = Column(Integer, primary_key=True)
-    
+
     id_ubicacion = Column(Integer, nullable=False)
     id_lote = Column(Integer, nullable=False)
     cant_disp = Column(Integer, nullable=False)
     cantidad = Column(Integer, nullable=False)
 
     cabecera = relationship("TrasladoStock", back_populates="detalles")
+    articulo = relationship(
+        "CodigosBarra",
+        back_populates="traslados",
+        primaryjoin="DetalleTrasladoStock.id_codbarra == CodigosBarra.id_codbarra",
+        foreign_keys=[id_codbarra]
+    )

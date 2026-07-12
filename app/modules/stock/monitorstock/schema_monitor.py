@@ -31,10 +31,118 @@ class StockDisponible(BaseModel):
     bodega: str = Field(alias="bodega")
     categoria: str = Field(alias="categoria")
     subcategoria: str = Field(alias="subcategoria")
+    id_articulo: int = Field(alias="idarticulo")
     cod_articulo: str = Field(alias="codarticulo")
     nom_articulo: str = Field(alias="nomarticulo")
+    id_codbarra: int = Field(alias="idcodbarra")
+    cod_barra: str = Field(alias="codbarra")
     estado: str = Field(alias="estado")
     unidad: str = Field(alias="unidad")
+    cantidad: float = Field(alias="cantidad")
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True
+    )
+
+class MovimientoStock(BaseModel):
+    fec_doc: date = Field(alias="fec_doc")
+    documento: str = Field(alias="documento")
+    nro_docum: int = Field(alias="nro_docum")
+    bodega: str = Field(alias="bodega")
+    estado: str = Field(alias="estado")
+    tipo_movimiento: str = Field(alias="tipo_movimiento")
+    cantidad: int = Field(alias="cantidad")
+    vista: str = Field(alias="vista")
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True
+    )
+
+# Modelo principal de respuesta de Valoracion de Inventario
+class MonitorValoracion(BaseModel):
+    totalElements: int
+    totalPages: int
+    number: int
+    size: int
+    valorTotalInventario: float
+    detalles: List[ValoracionDisponible]
+
+    class Config:
+        from_attributes = True
+
+class ValoracionDisponible(BaseModel):
+    negocio: str = Field(alias="negocio")
+    bodega: str = Field(alias="bodega")
+    categoria: str = Field(alias="categoria")
+    subcategoria: str = Field(alias="subcategoria")
+    id_articulo: int = Field(alias="idarticulo")
+    cod_articulo: str = Field(alias="codarticulo")
+    nom_articulo: str = Field(alias="nomarticulo")
+    unidad: str = Field(alias="unidad")
+    cantidad: float = Field(alias="cantidad")
+    costo_unitario: float = Field(alias="costounitario")
+    valor_total: float = Field(alias="valortotal")
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True
+    )
+
+# Modelo principal de respuesta de Stock Minimo (alertas de reposicion)
+class MonitorStockMinimo(BaseModel):
+    totalElements: int
+    totalPages: int
+    number: int
+    size: int
+    totalFaltante: float
+    detalles: List[StockMinimoDisponible]
+
+    class Config:
+        from_attributes = True
+
+class StockMinimoDisponible(BaseModel):
+    negocio: str = Field(alias="negocio")
+    categoria: str = Field(alias="categoria")
+    subcategoria: str = Field(alias="subcategoria")
+    id_articulo: int = Field(alias="idarticulo")
+    cod_articulo: str = Field(alias="codarticulo")
+    nom_articulo: str = Field(alias="nomarticulo")
+    unidad: str = Field(alias="unidad")
+    cantidad_disponible: float = Field(alias="cantidaddisponible")
+    stock_minimo: float = Field(alias="stockminimo")
+    stock_maximo: Optional[float] = Field(None, alias="stockmaximo")
+    faltante: float = Field(alias="faltante")
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True
+    )
+
+# Modelo principal de respuesta de Vencimientos Proximos (alertas de lotes por vencer)
+class MonitorVencimientos(BaseModel):
+    totalElements: int
+    totalPages: int
+    number: int
+    size: int
+    totalUnidadesEnRiesgo: float
+    detalles: List[LoteVencimiento]
+
+    class Config:
+        from_attributes = True
+
+class LoteVencimiento(BaseModel):
+    negocio: str = Field(alias="negocio")
+    categoria: str = Field(alias="categoria")
+    subcategoria: str = Field(alias="subcategoria")
+    id_articulo: int = Field(alias="idarticulo")
+    cod_articulo: str = Field(alias="codarticulo")
+    nom_articulo: str = Field(alias="nomarticulo")
+    bodega: str = Field(alias="bodega")
+    codigo_lote: str = Field(alias="codigolote")
+    fec_vencimiento: date = Field(alias="fecvencimiento")
+    dias_para_vencer: int = Field(alias="diasparavencer")
     cantidad: float = Field(alias="cantidad")
 
     model_config = ConfigDict(

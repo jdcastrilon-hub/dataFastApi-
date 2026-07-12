@@ -24,9 +24,11 @@ def NumeradorNextReal(db: Session,numerador : str):
 def get_compra_disponible(db: Session, id_articulo: int,id_codbarra: int, bodega_id: int, estado_id: int , id_proveedor : int):
         # Definimos el query nativo llamando a la función
         query = text("""
-            SELECT 
-                s.stock AS "stock", 
-                s.costo AS "costo"
+            SELECT
+                s.stock AS "stock",
+                s.costo AS "costo",
+                s.impuesto AS "impuesto",
+                s.porcentaje AS "porcentaje"
             FROM comprasdisponiblexbodega(:param_articulo_id, :param_id_codbarra, :param_bodega_id, :param_estado_id, :param_id_proveedor) AS s
         """)
 

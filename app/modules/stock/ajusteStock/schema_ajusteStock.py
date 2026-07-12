@@ -11,9 +11,13 @@ class LogEntry(BaseModel):
 # --- Esquemas para la Cabecera ---
 class AjusteStockBase(BaseModel):
     id_trans: Optional[int] = Field(None,alias="idTrans")
+    # No se selecciona: siempre es la empresa de la sesion actual (ver LoginService.getIdEmpresaActual()).
+    id_emp: int = Field(alias="idEmpresa")
     id_bodega: int = Field(alias="idBodega")
     documento: str = Field(alias="documento", max_length=10)
-    nro_docum: int= Field(alias="nroDocum")
+    # Se autogenera desde el numerador de la empresa (ver CODIGO_NUMERADOR_AJUSTESTOCK);
+    # opcional porque el formulario ya no lo tiene que enviar al crear.
+    nro_docum: Optional[int] = Field(None, alias="nroDocum")
     id_calculo: int= Field(alias="idCalculo")
     fecha_movimiento: datetime = Field(alias="fechaMovimiento")
     id_estado: int= Field(alias="idEstado")
@@ -22,6 +26,9 @@ class AjusteStockBase(BaseModel):
     vista:  str = Field(alias="vista", max_length=16)
     fecha_mod: Optional[datetime] = Field(alias="fechaMod",default=None)
     detalles: List[DetalleAjusteBase] = Field(default=[], alias="detalles")
+    # Lotes nuevos (aun no existen en m_lotes) creados durante la edicion de este ajuste.
+    # Se materializan solo al guardar (ver sp_stock_impacto_ajustestock).
+    nuevos_lotes: List[DetalleAjusteStockNuevoLote] = Field(default=[], alias="nuevosLotes")
     logs: List[LogEntry]
 
     model_config = ConfigDict(
@@ -44,6 +51,19 @@ class DetalleAjusteBase(BaseModel):
 
     model_config = ConfigDict(
     from_attributes=True,  
+    populate_by_name=True)
+
+class DetalleAjusteStockNuevoLote(BaseModel):
+    id_trans: Optional[int] = Field(None, alias="idTrans")
+    id_articulo: int = Field(alias="idArticulo")
+    id_lote: int = Field(alias="idLote")
+    linea: Optional[int] = None
+
+    codigo_lote: str = Field(alias="codigoLote", max_length=50)
+    fec_vencimiento: date = Field(alias="fecVencimiento")
+
+    model_config = ConfigDict(
+    from_attributes=True,
     populate_by_name=True)
 
 class AjusteStockCreate(AjusteStockBase):

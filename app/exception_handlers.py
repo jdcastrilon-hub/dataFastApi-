@@ -7,8 +7,24 @@ from sqlalchemy.exc import DataError, IntegrityError
 
 from app.exceptions import TransaccionValidationError
 
-def add_exception_handlers(app):
-    
+def add_exception_handlers(app, allowed_origins=None):
+    allowed_origins = allowed_origins or []
+
+    def _cors_headers(request: Request) -> dict:
+        # El handler de Exception corre en ServerErrorMiddleware, que en Starlette
+        # queda POR FUERA del CORSMiddleware del usuario (este solo envuelve
+        # ExceptionMiddleware hacia adentro). Por eso las respuestas de los demás
+        # handlers sí llevan headers CORS automáticamente, pero esta no — hay que
+        # agregarlos a mano, reflejando el mismo origen permitido que CORSMiddleware,
+        # o el navegador descarta la respuesta como si fuera un fallo de CORS.
+        origin = request.headers.get("origin")
+        if origin and origin in allowed_origins:
+            return {
+                "Access-Control-Allow-Origin": origin,
+                "Access-Control-Allow-Credentials": "true",
+            }
+        return {}
+
     # 1. Error de validación de Pydantic (Datos mal formados)
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -32,11 +48,21 @@ def add_exception_handlers(app):
     SQLSTATE_FOREIGN_KEY_VIOLATION = "23503"
     SQLSTATE_NOT_NULL_VIOLATION = "23502"
 
+    # Mensajes puntuales por nombre de constraint, para cuando el genérico ("Ya
+    # existe un registro con ese código...") no le dice al usuario CUÁL valor está
+    # duplicado. Postgres siempre entrega el nombre de la constraint en el error
+    # (exc.orig.diag.constraint_name), así que no hace falta adivinar por texto.
+    # Cualquier constraint no listada aquí sigue usando el mensaje genérico.
+    MENSAJES_UNIQUE_VIOLATION = {
+        "t_compras_unique": "Ya existe una compra registrada con ese número de remito para este proveedor.",
+    }
+
     @app.exception_handler(IntegrityError)
     async def integrity_exception_handler(request: Request, exc: IntegrityError):
         pgcode = getattr(exc.orig, "pgcode", None)
         diag = getattr(exc.orig, "diag", None)
         columna = getattr(diag, "column_name", None) if diag else None
+        constraint = getattr(diag, "constraint_name", None) if diag else None
 
         # Valores por defecto
         status_code = status.HTTP_400_BAD_REQUEST
@@ -53,7 +79,10 @@ def add_exception_handlers(app):
             error_detail = "ForeignKeyViolation"
 
         elif pgcode == SQLSTATE_UNIQUE_VIOLATION:
-            friendly_msg = "Ya existe un registro con ese código o valor único. Verifica los datos e intenta nuevamente."
+            friendly_msg = MENSAJES_UNIQUE_VIOLATION.get(
+                constraint,
+                "Ya existe un registro con ese código o valor único. Verifica los datos e intenta nuevamente."
+            )
             error_detail = "UniqueViolation"
 
         elif pgcode == SQLSTATE_FOREIGN_KEY_VIOLATION:
@@ -101,6 +130,7 @@ def add_exception_handlers(app):
                 "message": "Ha ocurrido un error inesperado en el servidor.",
                 "data": str(exc)
             },
+            headers=_cors_headers(request),
         )
     
     @app.exception_handler(DataError)

@@ -14,10 +14,11 @@ class LogEntry(BaseModel):
 class CompraBase(BaseModel):
     id_trans: Optional[int] = Field(None,alias="idTrans")
     id_emp : int = Field(alias="idEmp")
-    id_proveedor: int = Field(alias="idProveedor")    
+    id_sucursal: int = Field(alias="idSucursal")
+    id_proveedor: int = Field(alias="idProveedor")
     fec_doc : datetime = Field(alias="fecDoc")
     documento: str = Field(alias="documento", max_length=10)
-    nro_docum: int= Field(alias="nroDocum")
+    nro_docum: Optional[int] = Field(None, alias="nroDocum")
     remito: str = Field(alias="remito", max_length=30)
     status: str = Field(alias="status", max_length=2)
     ingresa_bodega: str = Field(alias="ingresaBodega", max_length=2)
@@ -37,6 +38,7 @@ class CompraBase(BaseModel):
     fecha_mod: Optional[datetime] = Field(alias="fechaMod",default=None)
     detalles: List[DetalleCompra] = Field(default=[], alias="detalles")
     nuevoCodigoBarra : List[DetalleCompraNuevoCodigoBarra] = Field(default=[], alias="nuevoCodigoBarra")
+    nuevos_lotes: List[DetalleCompraNuevoLote] = Field(default=[], alias="nuevosLotes")
     logs: List[LogEntry]
     bodega : Optional[SucursalSimple] = None #Solo aplica para la edicion de la compra.
     proveedor : Optional[ProveedorSimple] = None  #Solo aplica para la edicion de la compra.
@@ -92,7 +94,23 @@ class DetalleCompraNuevoCodigoBarra(BaseModel):
     ref_barra: Optional[str] = Field(None,alias="nomBarra", max_length=100)
 
     model_config = ConfigDict(
-    from_attributes=True,  
+    from_attributes=True,
+    populate_by_name=True)
+
+
+# Staging de lotes nuevos (aun no existen en m_lotes) creados durante la carga de
+# la compra - mismo patron que DetalleCompraNuevoCodigoBarra, ver models.py.
+class DetalleCompraNuevoLote(BaseModel):
+    id_trans: Optional[int] = Field(None, alias="idTrans")
+    id_articulo: int = Field(alias="idArticulo")
+    id_lote: int = Field(alias="idLote")
+    linea: Optional[int] = None
+
+    codigo_lote: str = Field(alias="codigoLote", max_length=50)
+    fec_vencimiento: date = Field(alias="fecVencimiento")
+
+    model_config = ConfigDict(
+    from_attributes=True,
     populate_by_name=True)
 
 
@@ -110,9 +128,10 @@ class PaginatedCompraResponse(BaseModel):
 # Esquema para paginacion
 class CompraPaginacion(BaseModel):
     id_trans : int
-    fec_doc: date = Field(alias="Fecha")  
-    nro_docum: int = Field(alias="NumOC")  
+    fec_doc: date = Field(alias="Fecha")
+    nro_docum: int = Field(alias="NumOC")
     remito : str = Field(alias="Remito", max_length=30)
+    status : str = Field(alias="Status", max_length=2)
     imp_total : Decimal = Field(alias="Importe")
     proveedor: ProveedorSimple
     bodega : Optional[BodegaSimple] = None
@@ -154,6 +173,7 @@ class SucursalSimple(BaseModel):
 class ArticuloSimple(BaseModel):
     cod_barra: str = Field(alias="codArticulo" , max_length=50)
     ref_barra: str = Field(alias="nomArticulo" , max_length=100)
+    maneja_lote: bool = Field(False, alias="manejaLote")
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 class ImpuestoSimple(BaseModel):

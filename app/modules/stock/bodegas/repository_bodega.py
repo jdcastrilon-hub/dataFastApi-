@@ -1,4 +1,4 @@
-from sqlalchemy import desc, text
+from sqlalchemy import desc, or_, text
 from sqlalchemy.orm import Session
 from . import model_bodega, schema_bodega
 
@@ -59,14 +59,26 @@ def delete_bodega(db: Session, bodega_id: int):
     return db_bodega
 
 #Paginacion
-def get_bodegas_paginated(db: Session, page: int, size: int):
-    # 1. Contar el total de registros en la tabla
-    total_records = db.query(model_bodega.Bodega).count()
-    
+def get_bodegas_paginated(db: Session, page: int, size: int, texto: str = None):
+    query = db.query(model_bodega.Bodega)
+
+    # Filtro de busqueda por codigo o nombre (si el usuario escribio algo)
+    if texto:
+        patron = f"%{texto}%"
+        query = query.filter(
+            or_(
+                model_bodega.Bodega.cod_bodega.ilike(patron),
+                model_bodega.Bodega.nom_bodega.ilike(patron)
+            )
+        )
+
+    # 1. Contar el total de registros que cumplen el filtro
+    total_records = query.count()
+
     # 2. Obtener los registros de la página actual
     offset = page * size
-    items = db.query(model_bodega.Bodega).order_by(desc(model_bodega.Bodega.fecha_mod)).offset(offset).limit(size).all()
-    
+    items = query.order_by(desc(model_bodega.Bodega.fecha_mod)).offset(offset).limit(size).all()
+
     # 3. Calcular total de páginas
     total_pages = (total_records + size - 1) // size
     
@@ -90,7 +102,7 @@ def get_stock_disponible(db: Session, idArticulo: int,idCodbarra: int, idBodega:
     result = db.execute(query, {
             "param_articulo_id": idArticulo,
             "param_id_codbarra": idCodbarra,
-            "param_bodega_id": idCodbarra,
+            "param_bodega_id": idBodega,
             "param_estado_id": idEstado
     })
         

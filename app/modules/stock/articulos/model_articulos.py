@@ -23,6 +23,7 @@ class Articulo(Base):
 
     # Configuración de Stock
     activo_stock = Column(Boolean, default=True)
+    maneja_lote = Column(Boolean, nullable=False, default=False)
     stock_min = Column(Integer, nullable=True)
     stock_max = Column(Integer, nullable=True)
 
@@ -67,6 +68,14 @@ class CodigosBarra(Base):
     # Referencia para compras
     compras = relationship("DetalleCompra", back_populates="articulo")
     ajustes = relationship("DetalleAjusteStock", back_populates="articulo")
+    traslados = relationship("DetalleTrasladoStock", back_populates="articulo")
+
+    @property
+    def maneja_lote(self):
+        # Proxy hacia el articulo dueño de este codigo de barra - permite que
+        # schemas que serializan CodigosBarra directamente (ej. ArticuloSimple en
+        # compras) expongan manejaLote sin tener que reestructurar esa consulta.
+        return self.articulo.maneja_lote if self.articulo else False
 
 class CodigosBarraModel(Base): 
     __tablename__ = "m_artxcodigobarramodel"
