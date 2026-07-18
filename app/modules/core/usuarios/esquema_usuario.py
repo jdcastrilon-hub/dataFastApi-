@@ -45,10 +45,17 @@ class UsuarioCreate(UsuarioBase):
 
 
 class ClienteSearch(BaseModel):
-    id_cliente: int = Field(alias="idCliente") 
-    id_persona: int = Field(alias="idPersona") 
+    id_cliente: int = Field(alias="idCliente")
+    id_persona: int = Field(alias="idPersona")
     cod_tit: str = Field(alias="codTit", max_length=20)
     nom_cliente: str = Field(alias="nombreCompleto", max_length=80)
 
     class Config:
-        from_attributes = True   
+        from_attributes = True
+
+class UsuarioSearch(BaseModel):
+    id_usuario: int = Field(alias="idUsuario")
+    usuario: str = Field(alias="usuario", max_length=20)
+    nom_usuario: str = Field(alias="nombreCompleto", max_length=100)
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)

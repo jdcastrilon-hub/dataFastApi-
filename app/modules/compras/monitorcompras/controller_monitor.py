@@ -70,6 +70,15 @@ def get_detalle_compra(
     return repository_monitor.get_detalle_compra(db, nro_trans)
 
 
+@router.get("/comprasrealizadas/devoluciones", response_model=List[schema_monitor.DevolucionCompraLinea])
+def get_devoluciones_compra(
+    nro_trans: int,
+    db: Session = Depends(get_db),
+    usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)
+):
+    return repository_monitor.get_devoluciones_compra(db, nro_trans)
+
+
 @router.get("/costos", response_model=schema_monitor.MonitorCosto)
 def get_costos(
     id_emp: int,

@@ -6,6 +6,28 @@ from app.modules.compras.personas import modelo_personas
 from app.core.auth.security import obtener_password_hash
 
 
+def find_usuarios_by_query(db: Session, query: str):
+    search_filter = f"%{query}%"
+
+    return (
+        db.query(
+            model_usuario.Usuario.id_usuario.label("idUsuario"),
+            model_usuario.Usuario.usuario.label("usuario"),
+            model_usuario.Usuario.nom_usuario.label("nombreCompleto")
+        )
+        .filter(
+            model_usuario.Usuario.activo == True,
+            or_(
+                model_usuario.Usuario.usuario.ilike(search_filter),
+                model_usuario.Usuario.nom_usuario.ilike(search_filter)
+            )
+        )
+        .order_by(model_usuario.Usuario.nom_usuario)
+        .limit(20)
+        .all()
+    )
+
+
 # Crear un proveedor
 def create_usuario(db: Session, obj: esquema_usuario.UsuarioCreate):
         print("--- CONTROL DE DATOS ---")

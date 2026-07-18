@@ -132,6 +132,14 @@ def get_detalle_compra(db: Session, id_trans: int):
     return [row._mapping for row in result]
 
 
+def get_devoluciones_compra(db: Session, id_compra_origen: int):
+    result = db.execute(
+        text("SELECT * FROM monitorcompras_devoluciones(:id_compra_origen)"),
+        {"id_compra_origen": id_compra_origen}
+    ).all()
+    return [row._mapping for row in result]
+
+
 def get_costos(db: Session, id_emp: int, bodega : str, negocio :str , categoria : str,subcategoria : str,page: int, size: int, articulos: list[int] | None = None):
     param_articulos = articulos if articulos else None
 
@@ -140,15 +148,8 @@ def get_costos(db: Session, id_emp: int, bodega : str, negocio :str , categoria 
         {"id_emp": id_emp, "param_bodega_id": bodega, "param_negocio_id": negocio, "param_categoria_id": categoria , "param_subcategoria_id" : subcategoria, "param_articulos": param_articulos}
     ).first()
 
-    # 3. Construyes el JSON de UI
-    kpis = [
-        {
-            "titulo": "Total Artículos",
-            "valor": str(stats.totalarticulos),
-            "icono": "inventory_2",
-            "color": "#009688"
-        }
-    ]
+    # Un solo KPI no aporta info que el paginador ya no muestre (misma convención que Inventario)
+    kpis = []
 
      #calculamos el total de registros
     total_records = stats.totalarticulos

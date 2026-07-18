@@ -11,6 +11,12 @@ router = APIRouter(
     prefix="/core/usuarios",
     tags=["Core - usuario"])
 
+@router.get("/search", response_model=List[esquema_usuario.UsuarioSearch])
+def usuario_search(
+    query: str,
+    db: Session = Depends(get_db),
+    usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
+    return repository_usuario.find_usuarios_by_query(db, query)
 
 @router.post("/save")
 def create_cliente(db_cliente: esquema_usuario.UsuarioCreate, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):

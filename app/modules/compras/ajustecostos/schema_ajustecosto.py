@@ -26,5 +26,13 @@ class AjusteBase(BaseModel):
     logs: List[LogEntry]
 
     model_config = ConfigDict(
-    from_attributes=True,  
+    from_attributes=True,
     populate_by_name=True)
+
+
+class HistorialAjusteCosto(BaseModel):
+    fecha: date
+    costo_actual: Decimal
+    costo_nuevo: Decimal
+    observaciones: Optional[str] = None
+    usuario: Optional[str] = None

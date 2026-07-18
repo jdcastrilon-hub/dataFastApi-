@@ -20,3 +20,13 @@ def save(ajuste: schema_ajustecosto.AjusteBase, db: Session = Depends(get_db), u
             "message": "Ajuste creado exitosamente",
             "data": None  # Omites el objeto completo para ahorrar recursos
     }
+
+
+@router.get("/historial", response_model=List[schema_ajustecosto.HistorialAjusteCosto])
+def historial(
+    id_articulo: int,
+    id_bodega: int,
+    db: Session = Depends(get_db),
+    usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)
+):
+    return repository_ajustecosto.get_historial_ajustes(db, id_articulo, id_bodega)

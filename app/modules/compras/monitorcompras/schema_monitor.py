@@ -15,17 +15,18 @@ class KPICard(BaseModel):
 
 class Comprasrealizadas(BaseModel):
     id_trans : int
-    fec_doc: date = Field(alias="fecha")  
-    nro_docum: int = Field(alias="numoc")  
+    fec_doc: date = Field(alias="fecha")
+    nro_docum: int = Field(alias="numoc")
     remito : str = Field(alias="remito", max_length=30)
     imp_total : Decimal = Field(alias="importe")
     nombreproveedor : str = Field(alias="nombreproveedor", max_length=100)
     nombrebodega : str = Field(alias="nombrebodega", max_length=100)
+    num_devoluciones: int = 0
 
     model_config = ConfigDict(
-        from_attributes=True,  
-        populate_by_name=True   
-    ) 
+        from_attributes=True,
+        populate_by_name=True
+    )
 
 # Modelo principal de respuesta del Monitor
 class MonitorComprasRealizadas(BaseModel):
@@ -39,6 +40,21 @@ class MonitorComprasRealizadas(BaseModel):
 
     class Config:
         from_attributes = True
+
+class DevolucionCompraLinea(BaseModel):
+    nro_devolucion: int
+    fecha: date
+    motivo: Optional[str] = None
+    cod_barra: str
+    nom_articulo: str
+    codigo_lote: Optional[str] = None
+    cantidad: int
+    costo_unit: Decimal
+    costo_total: Decimal
+
+    class Config:
+        from_attributes = True
+
 
 class DetalleCompraLinea(BaseModel):
     cod_barra: str

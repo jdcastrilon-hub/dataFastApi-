@@ -12,6 +12,12 @@ class TAbrirTurno(Base):
     id_caja = Column(Integer,ForeignKey("m_cajas.id"), nullable=False)
     
     fec_doc = Column(Date, nullable=True)
+    # Se fija UNA sola vez al crear el turno (nunca se toca en update_turno) - es la
+    # unica fuente confiable de "cuando se abrio realmente" para calcular si el
+    # turno ya vencio (ver m_cajas.horas_turno). fec_doc es solo Date (sin hora) y
+    # fecha_mod cambia con cualquier edicion posterior, ninguna de las dos sirve
+    # para esto.
+    fecha_apertura = Column(DateTime, nullable=True)
     status = Column(Boolean, nullable=False, default=True)
     imp_base = Column(Numeric(14, 2), nullable=True)
     usuario = Column(String(16), nullable=False)

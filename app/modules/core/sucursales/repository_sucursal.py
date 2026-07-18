@@ -5,6 +5,7 @@ from app.modules.stock.bodegas import model_bodega
 from app.modules.comercial.documentos import model_docum
 from app.modules.comercial.mediopago import model_medio
 from app.modules.comercial.cajas import model_cajas
+from app.modules.core.usuarios import model_usuario
 
 def get_sucursales(db: Session, page: int = 0, size: int = 100):
     print(page)
@@ -59,9 +60,9 @@ def get_sucursales_by_bodegas(db: Session, id_empresa: int):
     return resultado
 
 
-def get_sucursales_by_cajas(db: Session, id_empresa: int):
+def get_sucursales_by_cajas(db: Session, id_empresa: int, usuario: str = None):
 
-    sucursales = (
+    query = (
             db.query(model_sucursal.Sucursal)
             # 1. Aquí haces el JOIN usando la relación de tu modelo
             .join(model_sucursal.Sucursal.caja)
@@ -72,14 +73,25 @@ def get_sucursales_by_cajas(db: Session, id_empresa: int):
                 and_(
                     model_sucursal.Sucursal.id_emp == id_empresa,
                     model_sucursal.Sucursal.activo == "S",
-                    # CORRECCIÓN: Usamos la clase MCaja directamente. 
+                    # CORRECCIÓN: Usamos la clase MCaja directamente.
                     # SQLAlchemy es inteligente y sabe que se refiere al JOIN de arriba.
-                    model_cajas.MCaja.cajapos == True  
+                    model_cajas.MCaja.cajapos == True
                 )
             )
-            .all()
         )
-    
+
+    if usuario:
+        # Solo las cajas POS que este usuario tiene asociadas en m_cajasxuser
+        # (ej. para abrir turno: no debe poder elegir una caja ajena).
+        cajas_del_usuario = (
+            db.query(model_cajas.MCajasXUser.id_caja)
+            .join(model_usuario.Usuario, model_usuario.Usuario.id_usuario == model_cajas.MCajasXUser.id_usuario)
+            .filter(model_usuario.Usuario.usuario == usuario)
+        )
+        query = query.filter(model_cajas.MCaja.id.in_(cajas_del_usuario))
+
+    sucursales = query.all()
+
    # Mapeamos manualmente el atributo de la relación si el nombre difiere.
     # En tu modelo pusiste: caja = relationship("MCaja", back_populates="sucursal")
     # Pero el JSON espera la propiedad llamada 'cajas'. Hacemos el mapeo rápido:

@@ -31,5 +31,25 @@ def create_ajuste(db: Session, obj: schema_ajustecosto.AjusteBase):
             )   
 
         db.commit()
-        db.refresh(bd_ajuste) 
+        db.refresh(bd_ajuste)
         return bd_ajuste
+
+
+def get_historial_ajustes(db: Session, id_articulo: int, id_bodega: int):
+    ajustes = db.query(model_ajuste.AjusteCostoArticulo)\
+        .filter(model_ajuste.AjusteCostoArticulo.id_articulo == id_articulo,
+                model_ajuste.AjusteCostoArticulo.id_bodega == id_bodega)\
+        .order_by(desc(model_ajuste.AjusteCostoArticulo.fec_doc), desc(model_ajuste.AjusteCostoArticulo.id_trans))\
+        .all()
+
+    resultado = []
+    for a in ajustes:
+        usuario = a.logs[-1].get('usuario_mod') if a.logs else None
+        resultado.append({
+            "fecha": a.fec_doc,
+            "costo_actual": a.imp_costo_actual,
+            "costo_nuevo": a.imp_costo_nuevo,
+            "observaciones": a.observaciones,
+            "usuario": usuario
+        })
+    return resultado

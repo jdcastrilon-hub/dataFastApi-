@@ -1,5 +1,5 @@
+from datetime import datetime
 from sqlalchemy import Column, Integer, String, DateTime, JSON
-from sqlalchemy.ext.declarative import declarative_base
 from app.database import Base
 
 class MedioPago(Base):
@@ -8,4 +8,7 @@ class MedioPago(Base):
 
     id = Column(Integer, primary_key=True, nullable=False)
     tipo = Column(String(20), nullable=False)
-    orden= Column(Integer, nullable=False)
+    orden = Column(Integer, nullable=True)
+    id_emp = Column(Integer, nullable=False)
+    fecha_mod = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    logs = Column(JSON, nullable=True)
