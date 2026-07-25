@@ -5,6 +5,10 @@ from app.database import get_db
 from . import repository_ajusteStock, schema_ajusteStock
 from app.modules.core.usuarios import model_usuario
 from app.core.auth import security
+from app.core.auth.permisos import verificar_permiso
+
+# Codigo del formulario en md_menu (matriz de permisos)
+MENU_CODIGO = "INV_AJU"
 
 router = APIRouter(
     prefix="/bodega/ajustestock",
@@ -34,6 +38,7 @@ def crear_ajuste(ajustestock: schema_ajusteStock.AjusteStockCreate, db: Session 
     los resuelve el manejador global de IntegrityError con un mensaje amigable,
     en una sola llamada (el nroDocum también se asigna server-side, sin una
     llamada aparte al numerador)."""
+    verificar_permiso(db, usuario_autenticado.id_usuario, ajustestock.id_emp, MENU_CODIGO, "CREAR")
     repository_ajusteStock.create_ajustestock(db=db, obj=ajustestock)
     return {
         "status": "success",
@@ -44,6 +49,7 @@ def crear_ajuste(ajustestock: schema_ajusteStock.AjusteStockCreate, db: Session 
 @router.put("/edit")
 def actualizar_ajuste(id_trans: int, ajustestock: schema_ajusteStock.AjusteStockCreate, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
     """Actualiza un ajuste de stock existente (recalcula el impacto en el stock)."""
+    verificar_permiso(db, usuario_autenticado.id_usuario, ajustestock.id_emp, MENU_CODIGO, "EDITAR")
     db_ajuste = repository_ajusteStock.update_ajustestock(db, id_trans=id_trans, obj=ajustestock)
     if db_ajuste is None:
         raise HTTPException(status_code=404, detail="Ajuste no encontrado")
@@ -56,6 +62,11 @@ def actualizar_ajuste(id_trans: int, ajustestock: schema_ajusteStock.AjusteStock
 @router.delete("/delete", status_code=status.HTTP_204_NO_CONTENT)
 def eliminar_ajuste(id_trans: int, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
     """Elimina un ajuste de stock del sistema (revierte su impacto en el stock)."""
+    db_ajuste = repository_ajusteStock.get_ajustestock(db, id_trans=id_trans)
+    if db_ajuste is None:
+        raise HTTPException(status_code=404, detail="Ajuste no encontrado")
+    verificar_permiso(db, usuario_autenticado.id_usuario, db_ajuste.id_emp, MENU_CODIGO, "ELIMINAR")
+
     success = repository_ajusteStock.delete_ajustestock(db, id_trans=id_trans)
     if not success:
         raise HTTPException(status_code=404, detail="Ajuste no encontrado")

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, JSON, DateTime, ForeignKey, UniqueConstraint
+from sqlalchemy import Boolean, Column, Integer, String, JSON, DateTime, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -14,7 +14,8 @@ class Negocio(Base):
     id_emp = Column(Integer, ForeignKey("public.md_empresas.id_emp"), nullable=False)
     cod_negocio = Column(String(10), nullable=False)
     nom_negocio = Column(String(100), nullable=False)
-    
+    activo = Column(Boolean, nullable=False, default=True)
+
     # Auditoría
     logs = Column(JSON, nullable=True)
     fecha_mod = Column(DateTime, onupdate=func.now(), nullable=True)

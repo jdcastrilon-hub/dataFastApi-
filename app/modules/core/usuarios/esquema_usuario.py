@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
-from datetime import date, datetime
-from typing import List, Optional, Any
+from datetime import datetime
+from typing import List, Optional
+from app.modules.compras.personas import schema_personas
 
 #Esquema para leer la varaiable Logs
 class LogEntry(BaseModel):
@@ -9,53 +10,67 @@ class LogEntry(BaseModel):
     fecha_mod: str
 
 class UsuarioBase(BaseModel):
-    usuario: str = Field(alias="Usuario", max_length=20)
-    clave: str = Field(alias="clave", max_length=100)
+    id_emp: int = Field(alias="idEmp")
+    id_usuario: Optional[int] = Field(None, alias="idUsuario")
     id_persona: Optional[int] = Field(None, alias="idPersona")
-    nom_usuario: str = Field(alias="nomUsuario", max_length=100)   
-    activo: bool = Field(alias="activo")    
-    fecha_mod: Optional[datetime] = Field(alias="fechaMod",default=None)
+    usuario: str = Field(alias="usuario", max_length=20)
+    # Opcional: en edicion, en blanco significa "no cambiar la clave actual".
+    clave: Optional[str] = Field(None, alias="clave", max_length=100)
+    nom_usuario: str = Field(alias="nomUsuario", max_length=100)
+    activo: bool = Field(alias="activo")
+    fecha_mod: Optional[datetime] = Field(None, alias="fechaMod")
     logs: List[LogEntry]
-    persona:  PersonaBase= Field(default=[], alias="persona")
+    # Se reutiliza PersonaDetalle (no PersonaBase): sus alias ya coinciden con el
+    # payload real que arma PersonaComponent.aPayload() en el frontend (codigoTitular,
+    # fechaNacimiento, email, etc.) - PersonaBase usa un juego de alias distinto
+    # (codTit, fecNacimiento, sin alias en mail/sexo) pensado para otro caso de uso.
+    persona: Optional[schema_personas.PersonaDetalle] = None
 
     model_config = ConfigDict(
-    from_attributes=True,  
-    populate_by_name=True)
-
-class PersonaBase(BaseModel):    
-    id_tipodoc: int = Field(alias="idTipoDoc")
-    cod_tit:  str = Field(alias="codigoTitular", max_length=50)
-    nombres: str = Field(alias="nombres", max_length=60)
-    apellidos: str = Field(alias="apellidos", max_length=60)
-    nombre_completo:  str = Field(alias="nombreCompleto", max_length=120)
-    sexo: str = Field(alias="sexo", max_length=2)
-    fec_nacimiento: Optional[date] = Field(None, alias="fechaNacimiento")
-    direccion:  str = Field(alias="direccion", max_length=50)
-    telefono:  str = Field(alias="telefono", max_length=60)
-    mail: str = Field(alias="email", max_length=60)
-    id_ciudad:  int = Field(alias="idCiudad")
-    fecha_mod: Optional[datetime] = Field(alias="fechaMod",default=None)
-
-    model_config = ConfigDict(
-    from_attributes=True,  
-    populate_by_name=True)
+        from_attributes=True,
+        populate_by_name=True)
 
 class UsuarioCreate(UsuarioBase):
     pass
 
-
-class ClienteSearch(BaseModel):
-    id_cliente: int = Field(alias="idCliente")
+# Esquema para la respuesta (lo que devuelve /search por id, usado en ver/editar)
+class UsuarioResponse(BaseModel):
+    id_usuario: int = Field(alias="idUsuario")
     id_persona: int = Field(alias="idPersona")
-    cod_tit: str = Field(alias="codTit", max_length=20)
-    nom_cliente: str = Field(alias="nombreCompleto", max_length=80)
+    usuario: str = Field(alias="usuario", max_length=20)
+    nom_usuario: str = Field(alias="nomUsuario", max_length=100)
+    activo: bool = Field(alias="activo")
+    fecha_mod: Optional[datetime] = Field(None, alias="fechaMod")
+    logs: List[LogEntry]
+    persona: schema_personas.PersonaDetalle
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True)
 
+# Esquema usado por el autocompletar (combo-usuario, asignacion de cajas/conceptos, etc.)
 class UsuarioSearch(BaseModel):
     id_usuario: int = Field(alias="idUsuario")
     usuario: str = Field(alias="usuario", max_length=20)
     nom_usuario: str = Field(alias="nombreCompleto", max_length=100)
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+# Esquema para paginacion (lista de la pestaña Usuarios de Administracion)
+class UsuarioPaginacion(BaseModel):
+    id_usuario: int = Field(alias="idUsuario")
+    usuario: str = Field(alias="usuario", max_length=20)
+    nom_usuario: str = Field(alias="nomUsuario", max_length=100)
+    activo: bool = Field(alias="activo")
+    fecha_mod: Optional[datetime] = Field(None, alias="fechaMod")
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True)
+
+class PaginatedUsuarioResponse(BaseModel):
+    content: List[UsuarioPaginacion]
+    totalElements: int
+    totalPages: int
+    number: int
+    size: int

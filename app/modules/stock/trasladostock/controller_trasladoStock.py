@@ -4,6 +4,10 @@ from app.database import get_db
 from . import repository_trasladoStock, schema_trasladoStock
 from app.modules.core.usuarios import model_usuario
 from app.core.auth import security
+from app.core.auth.permisos import verificar_permiso
+
+# Codigo del formulario en md_menu (matriz de permisos)
+MENU_CODIGO = "INV_TRAS"
 
 router = APIRouter(
     prefix="/bodega/trasladobodega",
@@ -33,6 +37,7 @@ def crear_traslado(traslado: schema_trasladoStock.TrasladoStockCreate, db: Sessi
     los resuelve el manejador global de IntegrityError con un mensaje amigable,
     en una sola llamada (el nroDocum también se asigna server-side, sin una
     llamada aparte al numerador)."""
+    verificar_permiso(db, usuario_autenticado.id_usuario, traslado.id_emp, MENU_CODIGO, "CREAR")
     repository_trasladoStock.create_trasladobodega(db=db, obj=traslado)
     return {
         "status": "success",
@@ -43,6 +48,7 @@ def crear_traslado(traslado: schema_trasladoStock.TrasladoStockCreate, db: Sessi
 @router.put("/edit")
 def actualizar_traslado(id_trans: int, traslado: schema_trasladoStock.TrasladoStockCreate, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
     """Actualiza un traslado existente (recalcula el impacto en el stock de origen y destino)."""
+    verificar_permiso(db, usuario_autenticado.id_usuario, traslado.id_emp, MENU_CODIGO, "EDITAR")
     db_traslado = repository_trasladoStock.update_trasladobodega(db, id_trans=id_trans, obj=traslado)
     if db_traslado is None:
         raise HTTPException(status_code=404, detail="Traslado no encontrado")
@@ -55,6 +61,11 @@ def actualizar_traslado(id_trans: int, traslado: schema_trasladoStock.TrasladoSt
 @router.delete("/delete", status_code=status.HTTP_204_NO_CONTENT)
 def eliminar_traslado(id_trans: int, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
     """Elimina un traslado del sistema (revierte su impacto en el stock)."""
+    db_traslado = repository_trasladoStock.get_trasladobodega(db, id_trans=id_trans)
+    if db_traslado is None:
+        raise HTTPException(status_code=404, detail="Traslado no encontrado")
+    verificar_permiso(db, usuario_autenticado.id_usuario, db_traslado.id_emp, MENU_CODIGO, "ELIMINAR")
+
     success = repository_trasladoStock.delete_trasladobodega(db, id_trans=id_trans)
     if not success:
         raise HTTPException(status_code=404, detail="Traslado no encontrado")

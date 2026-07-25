@@ -45,12 +45,16 @@ def get_cajas_paginated(db: Session, page: int, size: int, idempresa: int, texto
 
 # Cajas asociadas a un usuario (m_cajasxuser) - para venta-directa cuando el
 # usuario no tiene un turno/caja POS abierto (escenario "administrador").
+# Solo cajas NO POS: si el usuario tuviera una caja POS realmente activa, ya
+# habria un turno abierto y el formulario habria tomado el Escenario A (turno)
+# en vez de este picker manual - una caja POS nunca debe elegirse aca.
 def get_cajas_por_usuario(db: Session, id_usuario: int, idempresa: int):
     return db.query(model_cajas.MCaja)\
         .join(model_cajas.MCajasXUser, model_cajas.MCajasXUser.id_caja == model_cajas.MCaja.id)\
         .filter(
             model_cajas.MCajasXUser.id_usuario == id_usuario,
-            model_cajas.MCaja.id_emp == idempresa
+            model_cajas.MCaja.id_emp == idempresa,
+            model_cajas.MCaja.cajapos == False
         )\
         .order_by(model_cajas.MCaja.nom_caja)\
         .all()

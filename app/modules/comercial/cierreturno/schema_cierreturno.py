@@ -113,6 +113,11 @@ class DetalleConceptoLinea(BaseModel):
     # Solo distinto de "importe" cuando la factura se pago con mas de un medio
     # (pago mixto) - el frontend muestra "$X de $Y" unicamente en ese caso.
     importe_total_factura: Decimal = Field(alias="importeTotalFactura")
+    # 'Factura' o 'MovimientoCaja' - el frontend usa esto para saber si tiene
+    # sentido el boton de "ver detalle" (nivel 3, solo existe para facturas) y
+    # que encabezados de columna mostrar (id_trans de un movimiento de caja NO
+    # es un id_trans de venta real, no se debe intentar abrir ese modal).
+    tipo: str = Field(alias="tipo")
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 

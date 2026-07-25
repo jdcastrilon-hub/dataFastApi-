@@ -6,6 +6,12 @@ from app.database import get_db
 from . import repository_articulos ,schema_articulos
 from app.modules.core.usuarios import model_usuario
 from app.core.auth import security
+from app.core.auth.permisos import verificar_permiso
+
+# Codigo del formulario en md_menu (matriz de permisos). m_articulos no tiene
+# columna id_emp propia (catalogo global) - el id_emp de estos endpoints es
+# solo para el chequeo de permiso, no se persiste en la tabla.
+MENU_CODIGO = "INV_ART"
 
 router = APIRouter(
     prefix="/bodega/articulos",
@@ -73,8 +79,9 @@ def reservar_lote(id_articulo: int, codigo_lote: str, db: Session = Depends(get_
     return repository_articulos.reservar_id_lote(db, id_articulo, codigo_lote)
 
 @router.post("/save")
-def save_articulo(articulo: schema_articulos.ArticuloCreate, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
+def save_articulo(articulo: schema_articulos.ArticuloCreate, id_emp: int, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
     """Crea una nueva bodega y retorna el objeto con su ID generado."""
+    verificar_permiso(db, usuario_autenticado.id_usuario, id_emp, MENU_CODIGO, "CREAR")
     repository_articulos.create_articulo(db=db, obj=articulo)
     return {
             "status": "success",
@@ -84,8 +91,9 @@ def save_articulo(articulo: schema_articulos.ArticuloCreate, db: Session = Depen
 
 
 @router.put("/edit/{id_articulo}")
-def actualizar_articulo(id_articulo: int, articulo: schema_articulos.ArticuloCreate, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
+def actualizar_articulo(id_articulo: int, id_emp: int, articulo: schema_articulos.ArticuloCreate, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
     """Actualiza los datos de una bodega existente."""
+    verificar_permiso(db, usuario_autenticado.id_usuario, id_emp, MENU_CODIGO, "EDITAR")
     repository_articulos.update_articulo(db, id_articulo=id_articulo, obj=articulo)
     return {
                 "status": "success",
@@ -94,8 +102,9 @@ def actualizar_articulo(id_articulo: int, articulo: schema_articulos.ArticuloCre
     }
 
 @router.delete("/delete/{id_articulo}", status_code=status.HTTP_204_NO_CONTENT)
-def eliminar_bodega(id_articulo: int, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
+def eliminar_bodega(id_articulo: int, id_emp: int, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
     """Elimina un artiulo del sistema."""
+    verificar_permiso(db, usuario_autenticado.id_usuario, id_emp, MENU_CODIGO, "ELIMINAR")
     success = repository_articulos.delete_articulo(db, id_articulo=id_articulo)
     if not success:
         raise HTTPException(status_code=404, detail="Articulo no encontrada")

@@ -13,6 +13,7 @@ from app.modules.stock.motivosStock.controller_motivoajuste import router as mot
 from app.modules.stock.ajusteStock.controller_ajusteStock import router as ajustestock
 from app.modules.stock.estados.controller_estado import router as estados
 from app.modules.stock.trasladostock.controller_trasladoStock import router as traslado
+from app.modules.stock.cargastock.controller_cargastock import router as cargastock
 from app.modules.stock.reporteInventario.controller_reporteinventario import router as reporteinventario
 from app.modules.stock.tiposervicio.controller_servicios import router as tiposervicio
 from app.modules.stock.monitorstock.controller_monitor import router as monitorstock
@@ -21,6 +22,8 @@ from app.modules.core.negocios.controller_negocio import router as negocios
 from app.modules.core.ciudades.controller_ciudades import router as ciudad
 from app.modules.core.menus.controller_menu import router as menus
 from app.modules.core.usuarios.controller_usuario import router as usuarios
+from app.modules.core.roles.controller_rol import router as roles
+from app.modules.core.permisos.controller_permiso import router as permisos
 from app.modules.impuestos.impuesto.controller_impuesto import router as impuestos
 from app.modules.compras.documentos.controller_documentos import router as tipodoc
 from app.modules.compras.personas.controller_personas import router as persona
@@ -36,7 +39,10 @@ from app.modules.comercial.mediopago.controller_medio import router as mediopago
 from app.modules.comercial.cajas.controller_cajas import router as cajas
 from app.modules.comercial.turnos.controller_turno import router as turno
 from app.modules.comercial.cierreturno.controller_cierreturno import router as cierreturno
+from app.modules.comercial.movimientocaja.controller_movcaja import router as movimientocaja
 from app.modules.comercial.documentos.controller_docum import router as documventas
+from app.modules.comercial.monitoroperaciones.controller_monitor import router as monitoroperaciones
+from app.modules.tesoreria.conceptos.controller_conceptos import router as conceptos
 from app.core.numeradores.controller_numerador import router as numeradores
 from app.core.Services.ServiceInicializacion.controller_serviciosIni import router as serviciosini
 from app.core.auth.controller_auth import router as inicioSesion
@@ -88,6 +94,7 @@ app.include_router(ciudad)
 app.include_router(provedor)
 app.include_router(compra)
 app.include_router(traslado)
+app.include_router(cargastock)
 app.include_router(reporteinventario)
 app.include_router(monitorcompras)
 app.include_router(tiposervicio)
@@ -101,8 +108,13 @@ app.include_router(mediopagos)
 app.include_router(cajas)
 app.include_router(turno)
 app.include_router(cierreturno)
+app.include_router(movimientocaja)
 app.include_router(documventas)
+app.include_router(monitoroperaciones)
+app.include_router(conceptos)
 app.include_router(numeradores)
 app.include_router(menus)
 app.include_router(usuarios)
+app.include_router(roles)
+app.include_router(permisos)
 app.include_router(inicioSesion)

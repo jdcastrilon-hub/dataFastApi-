@@ -5,6 +5,10 @@ from app.database import get_db
 from . import schema_categoria, repository_categoria
 from app.modules.core.usuarios import model_usuario
 from app.core.auth import security
+from app.core.auth.permisos import verificar_permiso
+
+# Codigo del formulario en md_menu (matriz de permisos)
+MENU_CODIGO = "INV_CAT"
 
 router = APIRouter(
     prefix="/bodega/categorias",
@@ -30,6 +34,7 @@ def obtener_categoria(categoria_id: int, db: Session = Depends(get_db), usuario_
 @router.post("/save")
 def crear_categoria(categoria: schema_categoria.CategoriaCreate, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
     """Crea una nueva categoria"""
+    verificar_permiso(db, usuario_autenticado.id_usuario, categoria.id_emp, MENU_CODIGO, "CREAR")
     repository_categoria.create_categoria(db=db, cat=categoria)
     return {
             "status": "success",
@@ -41,6 +46,7 @@ def crear_categoria(categoria: schema_categoria.CategoriaCreate, db: Session = D
 @router.put("/edit/{id_categoria}")
 def actualizar_categoria(id_categoria: int, categoria: schema_categoria.CategoriaCreate, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
     """Actualiza los datos de una categoria """
+    verificar_permiso(db, usuario_autenticado.id_usuario, categoria.id_emp, MENU_CODIGO, "EDITAR")
     repository_categoria.update_categoria(db, id_categoria=id_categoria, obj=categoria)
     return {
                 "status": "success",
@@ -51,7 +57,10 @@ def actualizar_categoria(id_categoria: int, categoria: schema_categoria.Categori
 @router.delete("/delete/{id_categoria}", status_code=status.HTTP_204_NO_CONTENT)
 def eliminar_categoria(id_categoria: int, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
     """Elimina una categoria del sistema."""
-    success = repository_categoria.delete_categoria(db, id_categoria=id_categoria)
-    if not success:
+    db_categoria = repository_categoria.get_categoriaByID(db, id_categoria)
+    if db_categoria is None:
         raise HTTPException(status_code=404, detail="La categoria no existe")
-    return None  
+    verificar_permiso(db, usuario_autenticado.id_usuario, db_categoria.id_emp, MENU_CODIGO, "ELIMINAR")
+
+    repository_categoria.delete_categoria(db, id_categoria=id_categoria)
+    return None

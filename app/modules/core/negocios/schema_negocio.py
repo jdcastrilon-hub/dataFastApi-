@@ -2,6 +2,47 @@ from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional, List, Any
 from datetime import datetime
 
+#Esquema para leer la varaiable Logs
+class LogEntry(BaseModel):
+    operacion: str
+    usuario_mod: str
+    fecha_mod: str
+
+class NegocioBase(BaseModel):
+    id: Optional[int] = Field(None, alias="id")
+    id_emp: int = Field(alias="idEmpresa")
+    cod_negocio: str = Field(alias="codNegocio", max_length=10)
+    nom_negocio: str = Field(alias="nomNegocio", max_length=100)
+    activo: bool = Field(alias="activo")
+    fecha_mod: Optional[datetime] = Field(None, alias="fechaMod")
+    logs: List[LogEntry] = Field(default=[])
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True)
+
+class NegocioCreate(NegocioBase):
+    pass
+
+# Esquema para paginacion (lista de la pestaña Negocios de Administracion)
+class NegocioPaginacion(BaseModel):
+    id: int = Field(alias="id")
+    cod_negocio: str = Field(alias="codNegocio", max_length=10)
+    nom_negocio: str = Field(alias="nomNegocio", max_length=100)
+    activo: bool = Field(alias="activo")
+    fecha_mod: Optional[datetime] = Field(None, alias="fechaMod")
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True)
+
+class PaginatedNegocioResponse(BaseModel):
+    content: List[NegocioPaginacion]
+    totalElements: int
+    totalPages: int
+    number: int
+    size: int
+
 #Interfaz (NegocioxCategoriasDTO)------------------------------
 
 class NegocioxCategoriasDTO(BaseModel):

@@ -6,6 +6,10 @@ from app.database import get_db
 from . import repository_estado ,schema_estado
 from app.modules.core.usuarios import model_usuario
 from app.core.auth import security
+from app.core.auth.permisos import verificar_permiso
+
+# Codigo del formulario en md_menu (matriz de permisos)
+MENU_CODIGO = "INV_EST"
 
 router = APIRouter(
     prefix="/bodega/estados",
@@ -39,6 +43,7 @@ def crear_estado(estado: schema_estado.EstadoCreate, db: Session = Depends(get_d
     No se atrapa la excepción aquí a propósito: así los errores de integridad
     (ej. codEstado duplicado) los resuelve el manejador global de IntegrityError
     con un mensaje amigable, en una sola llamada (sin endpoint de validación previa)."""
+    verificar_permiso(db, usuario_autenticado.id_usuario, estado.id_emp, MENU_CODIGO, "CREAR")
     repository_estado.create_estado(db=db, obj=estado)
     return {
         "status": "success",
@@ -52,6 +57,7 @@ def actualizar_estado(estado_id: int, estado: schema_estado.EstadoCreate, db: Se
     db_estado = repository_estado.get_estado(db, estado_id=estado_id)
     if db_estado is None:
         raise HTTPException(status_code=404, detail="Estado no encontrado")
+    verificar_permiso(db, usuario_autenticado.id_usuario, db_estado.id_emp, MENU_CODIGO, "EDITAR")
 
     repository_estado.update_estado(db, estado_id=estado_id, obj=estado)
     return {
@@ -63,7 +69,10 @@ def actualizar_estado(estado_id: int, estado: schema_estado.EstadoCreate, db: Se
 @router.delete("/delete", status_code=status.HTTP_204_NO_CONTENT)
 def eliminar_estado(estado_id: int, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
     """Elimina un estado del sistema."""
-    success = repository_estado.delete_estado(db, estado_id=estado_id)
-    if not success:
+    db_estado = repository_estado.get_estado(db, estado_id=estado_id)
+    if db_estado is None:
         raise HTTPException(status_code=404, detail="Estado no encontrado")
+    verificar_permiso(db, usuario_autenticado.id_usuario, db_estado.id_emp, MENU_CODIGO, "ELIMINAR")
+
+    repository_estado.delete_estado(db, estado_id=estado_id)
     return None

@@ -83,19 +83,40 @@ def get_resumen_cierre(db: Session, id_turno: int):
 # td_abrirturno es el id_trans de la venta que origino ese movimiento - con pago
 # mixto, una sola venta puede aportar mas de una linea aca (una por medio de
 # pago usado), por eso se trae tambien el total real de la factura.
+#
+# 'IngresoCaja'/'GastoCaja' (movimientos de caja, ver sp_comercial_movcaja) no
+# tienen factura/cliente - se reusa el mismo shape de respuesta (menos codigo
+# nuevo en el frontend) pero id_referencia apunta a t_movcajas, no a t_facturas,
+# asi que necesita su propio JOIN. "tipo" le dice al frontend cual es cual.
 def get_detalle_concepto(db: Session, id_turno: int, concepto: str, id_mediopago: int, signo: int):
-    query = text("""
-        SELECT ta.fecha, ta.id_referencia AS id_trans, ta.importe,
-               (f.serie_docum || CAST(f.nro_docum AS varchar)) AS factura,
-               f.imp_total AS importe_total_factura,
-               COALESCE(c.nom_cliente, '') AS cliente
-        FROM td_abrirturno ta
-        JOIN t_facturas f ON f.id_trans = ta.id_referencia
-        LEFT JOIN m_clientes c ON c.id_cliente = f.id_cliente
-        WHERE ta.id_turno = :id_turno AND ta.concepto = :concepto
-          AND ta.id_mediopago = :id_mediopago AND ta.signo = :signo
-        ORDER BY ta.fecha
-    """)
+    if concepto in ("IngresoCaja", "GastoCaja"):
+        query = text("""
+            SELECT ta.fecha, ta.id_referencia AS id_trans, ta.importe,
+                   mc.nom_concepto AS factura,
+                   ta.importe AS importe_total_factura,
+                   COALESCE(m.observacion, '') AS cliente,
+                   'MovimientoCaja' AS tipo
+            FROM td_abrirturno ta
+            JOIN t_movcajas m ON m.id = ta.id_referencia
+            JOIN m_conceptoscaja mc ON mc.id = m.id_concepto
+            WHERE ta.id_turno = :id_turno AND ta.concepto = :concepto
+              AND ta.id_mediopago = :id_mediopago AND ta.signo = :signo
+            ORDER BY ta.fecha
+        """)
+    else:
+        query = text("""
+            SELECT ta.fecha, ta.id_referencia AS id_trans, ta.importe,
+                   (f.serie_docum || CAST(f.nro_docum AS varchar)) AS factura,
+                   f.imp_total AS importe_total_factura,
+                   COALESCE(c.nom_cliente, '') AS cliente,
+                   'Factura' AS tipo
+            FROM td_abrirturno ta
+            JOIN t_facturas f ON f.id_trans = ta.id_referencia
+            LEFT JOIN m_clientes c ON c.id_cliente = f.id_cliente
+            WHERE ta.id_turno = :id_turno AND ta.concepto = :concepto
+              AND ta.id_mediopago = :id_mediopago AND ta.signo = :signo
+            ORDER BY ta.fecha
+        """)
     return db.execute(query, {
         "id_turno": id_turno,
         "concepto": concepto,
