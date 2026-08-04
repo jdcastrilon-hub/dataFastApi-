@@ -8,24 +8,14 @@ from app.modules.core.usuarios import model_usuario
 from app.core.auth import security
 from app.core.auth.permisos import verificar_permiso
 
-# Codigo del formulario en md_menu (matriz de permisos). m_articulos no tiene
-# columna id_emp propia (catalogo global) - el id_emp de estos endpoints es
-# solo para el chequeo de permiso, no se persiste en la tabla.
+# Codigo del formulario en md_menu (matriz de permisos). El id_emp de save/edit/delete
+# es solo para el chequeo de permiso; el que se persiste en m_articulos.id_emp se
+# deriva del negocio seleccionado (ver repository_articulos._obtener_negocio).
 MENU_CODIGO = "INV_ART"
 
 router = APIRouter(
     prefix="/bodega/articulos",
     tags=["Core - Empresas"])
-
-@router.get("/list", response_model=List[schema_articulos.ArticulosBase])
-def listar_empresas( db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
-    """Obtiene la lista de todas los articulos."""
-    return repository_articulos.get_articulos(db)
-
-@router.get("/list2", response_model=List[schema_articulos.ArticuloBaseCompleto])
-def listar_empresas( db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
-    """Obtiene la lista de todas los articulos."""
-    return repository_articulos.get_articulosCompleto(db)
 
 @router.get("/pagination", response_model=schema_articulos.PaginatedArticuloResponse)
 def list_bodegas_paginacion(
@@ -33,8 +23,8 @@ def list_bodegas_paginacion(
     size: int = Query(10, ge=1),
     texto: str = Query(None),
     db: Session = Depends(get_db),
-    usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
-    return repository_articulos.get_articulos_paginated(db, page, size, texto)
+    contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)):
+    return repository_articulos.get_articulos_paginated(db, page, size, contexto.id_emp, texto)
 
 @router.get("/search", response_model=schema_articulos.ArticulosBase)
 def obtener_bodega(id_articulo: int, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
@@ -70,8 +60,8 @@ def get_stock_masivo(id_articulo: int,cadena: str,db: Session = Depends(get_db),
     return repository_articulos.consultar_stock_codigosbarra(db, cadena, id_articulo)
 
 @router.get("/lotes", response_model=List[schema_articulos.LoteDisponible])
-def get_lotes_articulo(id_articulo: int, id_emp: int, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
-    return repository_articulos.get_lotes_articulo(db, id_articulo, id_emp)
+def get_lotes_articulo(id_articulo: int, db: Session = Depends(get_db), contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)):
+    return repository_articulos.get_lotes_articulo(db, id_articulo, contexto.id_emp)
 
 #Reserva un id de lote (nextval) sin insertar en m_lotes; se materializa al guardar la transaccion que lo usa.
 @router.get("/lotes/reservar", response_model=schema_articulos.LoteReservado)
@@ -79,9 +69,9 @@ def reservar_lote(id_articulo: int, codigo_lote: str, db: Session = Depends(get_
     return repository_articulos.reservar_id_lote(db, id_articulo, codigo_lote)
 
 @router.post("/save")
-def save_articulo(articulo: schema_articulos.ArticuloCreate, id_emp: int, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
+def save_articulo(articulo: schema_articulos.ArticuloCreate, db: Session = Depends(get_db), contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)):
     """Crea una nueva bodega y retorna el objeto con su ID generado."""
-    verificar_permiso(db, usuario_autenticado.id_usuario, id_emp, MENU_CODIGO, "CREAR")
+    verificar_permiso(db, contexto.usuario.id_usuario, contexto.id_emp, MENU_CODIGO, "CREAR")
     repository_articulos.create_articulo(db=db, obj=articulo)
     return {
             "status": "success",
@@ -91,9 +81,9 @@ def save_articulo(articulo: schema_articulos.ArticuloCreate, id_emp: int, db: Se
 
 
 @router.put("/edit/{id_articulo}")
-def actualizar_articulo(id_articulo: int, id_emp: int, articulo: schema_articulos.ArticuloCreate, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
+def actualizar_articulo(id_articulo: int, articulo: schema_articulos.ArticuloCreate, db: Session = Depends(get_db), contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)):
     """Actualiza los datos de una bodega existente."""
-    verificar_permiso(db, usuario_autenticado.id_usuario, id_emp, MENU_CODIGO, "EDITAR")
+    verificar_permiso(db, contexto.usuario.id_usuario, contexto.id_emp, MENU_CODIGO, "EDITAR")
     repository_articulos.update_articulo(db, id_articulo=id_articulo, obj=articulo)
     return {
                 "status": "success",
@@ -102,10 +92,10 @@ def actualizar_articulo(id_articulo: int, id_emp: int, articulo: schema_articulo
     }
 
 @router.delete("/delete/{id_articulo}", status_code=status.HTTP_204_NO_CONTENT)
-def eliminar_bodega(id_articulo: int, id_emp: int, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
+def eliminar_bodega(id_articulo: int, db: Session = Depends(get_db), contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)):
     """Elimina un artiulo del sistema."""
-    verificar_permiso(db, usuario_autenticado.id_usuario, id_emp, MENU_CODIGO, "ELIMINAR")
+    verificar_permiso(db, contexto.usuario.id_usuario, contexto.id_emp, MENU_CODIGO, "ELIMINAR")
     success = repository_articulos.delete_articulo(db, id_articulo=id_articulo)
     if not success:
         raise HTTPException(status_code=404, detail="Articulo no encontrada")
-    return None  
+    return None

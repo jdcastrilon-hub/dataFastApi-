@@ -17,13 +17,15 @@ def _limitar_logs(logs):
         return logs
     return logs[-MAX_LOGS_AUDITORIA:]
 
-def _obtener_cod_articulo(db: Session, id_negocio: int, cod_articulo_manual):
+def _obtener_negocio(db: Session, id_negocio: int):
+    return db.query(model_negocios.Negocio).filter(model_negocios.Negocio.id == id_negocio).first()
+
+def _obtener_cod_articulo(db: Session, negocio, cod_articulo_manual):
     """
     Asigna el codArticulo desde el numerador de la empresa dueña del negocio.
     Si esa empresa tiene "requiere_consecutivo" en False, respeta lo que haya
     enviado el formulario (modo manual).
     """
-    negocio = db.query(model_negocios.Negocio).filter(model_negocios.Negocio.id == id_negocio).first()
     if not negocio:
         return cod_articulo_manual
 
@@ -33,15 +35,6 @@ def _obtener_cod_articulo(db: Session, id_negocio: int, cod_articulo_manual):
 
     return repository_numerador.formatear_numerador(siguiente)
 
-# Obtener todas las bodegas ordenadas de mayor a menor
-def get_articulos(db: Session):
-    return db.query(model_articulos.Articulo).all()
-
-def get_articulosCompleto(db: Session):
-    return db.query(model_articulos.Articulo).options(joinedload(model_articulos.Articulo.negocio),
-                                                      joinedload(model_articulos.Articulo.subcategoria),
-                                                      joinedload(model_articulos.Articulo.unidad)
-                                                       ).all()
 # Obtener un articulo por ID
 def get_articulo(db: Session, id_articulo: int):
     return db.query(model_articulos.Articulo).filter(model_articulos.Articulo.id_articulo == id_articulo).options(joinedload(model_articulos.Articulo.objnegocio)).first()
@@ -60,6 +53,7 @@ def find_codigoBarra_by_query(db: Session, query: str):
             )
             .join(model_articulos.Articulo, model_articulos.Articulo.id_articulo == model_articulos.CodigosBarra.id_articulo)
             .filter(
+                model_articulos.CodigosBarra.estado == True,
                 or_(
                     model_articulos.CodigosBarra.cod_barra.ilike(search_filter),
                     model_articulos.CodigosBarra.ref_barra.ilike(search_filter)
@@ -84,7 +78,11 @@ def find_articulos_by_query(db: Session, query: str):
             .filter(
                 or_(
                     model_articulos.Articulo.cod_articulo.ilike(search_filter),
-                    model_articulos.Articulo.nom_articulo.ilike(search_filter)
+                    model_articulos.Articulo.nom_articulo.ilike(search_filter),
+                    exists().where(
+                        model_articulos.CodigosBarra.id_articulo == model_articulos.Articulo.id_articulo,
+                        model_articulos.CodigosBarra.cod_barra.ilike(search_filter)
+                    )
                 )
             )
             .order_by(model_articulos.Articulo.nom_articulo)
@@ -207,16 +205,20 @@ def reservar_id_lote(db: Session, id_articulo: int, codigo_lote: str):
     }
 
 #Paginacion
-def get_articulos_paginated(db: Session, page: int, size: int, texto: str = None):
-    query = db.query(model_articulos.Articulo)
+def get_articulos_paginated(db: Session, page: int, size: int, id_emp: int, texto: str = None):
+    query = db.query(model_articulos.Articulo).filter(model_articulos.Articulo.id_emp == id_emp)
 
-    # Filtro de busqueda por codigo o nombre (si el usuario escribio algo)
+    # Filtro de busqueda por codigo, nombre o codigo de barra (si el usuario escribio algo)
     if texto:
         patron = f"%{texto}%"
         query = query.filter(
             or_(
                 model_articulos.Articulo.cod_articulo.ilike(patron),
-                model_articulos.Articulo.nom_articulo.ilike(patron)
+                model_articulos.Articulo.nom_articulo.ilike(patron),
+                exists().where(
+                    model_articulos.CodigosBarra.id_articulo == model_articulos.Articulo.id_articulo,
+                    model_articulos.CodigosBarra.cod_barra.ilike(patron)
+                )
             )
         )
 
@@ -255,10 +257,12 @@ def create_articulo(db: Session, obj: schema_articulos.ArticuloCreate):
      # Convertimos la lista de objetos LogEntry a una lista de diccionarios
         logs_dict = _limitar_logs([log.model_dump() for log in obj.logs])
         # 1. Crear el objeto principal
-        cod_articulo = _obtener_cod_articulo(db, obj.id_negocio, obj.cod_articulo)
+        negocio = _obtener_negocio(db, obj.id_negocio)
+        cod_articulo = _obtener_cod_articulo(db, negocio, obj.cod_articulo)
         bd_articulo = model_articulos.Articulo(
             cod_articulo = cod_articulo,
             nom_articulo = obj.nom_articulo,
+            id_emp = negocio.id_emp if negocio else None,
             id_negocio = obj.id_negocio,
             id_categoria = obj.id_categoria,
             id_subcategoria = obj.id_subcategoria,
@@ -303,6 +307,10 @@ def update_articulo(db: Session, id_articulo: int, obj : schema_articulos.Articu
         bd_articulo.cod_articulo = obj.cod_articulo
         bd_articulo.nom_articulo = obj.nom_articulo
         bd_articulo.id_negocio = obj.id_negocio
+        # id_emp se recalcula por si el negocio (y su empresa) cambiaron en la edicion
+        negocio = _obtener_negocio(db, obj.id_negocio)
+        if negocio:
+            bd_articulo.id_emp = negocio.id_emp
         bd_articulo.id_categoria = obj.id_categoria
         bd_articulo.id_subcategoria = obj.id_subcategoria
         bd_articulo.id_unidad = obj.id_unidad

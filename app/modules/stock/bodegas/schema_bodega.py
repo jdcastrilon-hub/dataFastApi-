@@ -15,7 +15,7 @@ class BodegaBase(BaseModel):
     nom_bodega: str = Field(alias="nomBodega", max_length=80)
     principal: str = Field(alias="bodegaPrincipal", max_length=2, description="SI/NO o S/N")
     tiene_ubicaciones: str = Field(alias="manejaUbicaciones", max_length=2)
-    activo: str = Field(alias="activo", max_length=2)
+    activo: bool = Field(alias="activo")
     fecha_mod: Optional[datetime] = Field(alias="fechaMod",default=None)
     logs: List[LogEntry]
 
@@ -31,9 +31,9 @@ class BodegaPaginacion(BaseModel):
     nom_bodega: str = Field(alias="nomBodega", max_length=80)
     principal: str = Field(alias="bodegaPrincipal", max_length=2, description="SI/NO o S/N")
     tiene_ubicaciones: str = Field(alias="manejaUbicaciones", max_length=2)
-    activo: str = Field(alias="activo", max_length=2)
+    activo: bool = Field(alias="activo")
     fecha_mod: Optional[datetime] = Field(alias="fechaMod",default=None)
-  
+
 
     model_config = ConfigDict(
         from_attributes=True,  
@@ -89,4 +89,13 @@ class StockDisponibleResponse(BaseModel):
     stock: int
 
     class Config:
-        from_attributes = True    
+        from_attributes = True
+
+# Esquema para el recalculo masivo de stock de una grilla (ajustestock/traslado):
+# una sola llamada para varios codigos de barra, contra una bodega/estado puntual.
+class StockDisponibleMasivoResponse(BaseModel):
+    idcodbarra: int
+    stock: int
+
+    class Config:
+        from_attributes = True

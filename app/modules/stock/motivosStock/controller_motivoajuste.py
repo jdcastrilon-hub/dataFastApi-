@@ -7,9 +7,7 @@ from app.modules.core.usuarios import model_usuario
 from app.core.auth import security
 from app.core.auth.permisos import verificar_permiso
 
-# Codigo del formulario en md_menu (matriz de permisos). m_motivoajuste no tiene
-# columna id_emp propia (catalogo global) - el id_emp de estos endpoints es
-# solo para el chequeo de permiso, no se persiste en la tabla.
+# Codigo del formulario en md_menu (matriz de permisos)
 MENU_CODIGO = "INV_MOT"
 
 router = APIRouter(
@@ -17,9 +15,9 @@ router = APIRouter(
     tags=["Bodega - Motivos"])
 
 @router.get("/listCombo", response_model=List[schema_ajuste.MotivoCombo])
-def listar_motivos(db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
-    """Obtiene la lista de todas los motivos."""
-    return repository_motivoajuste.get_all(db)
+def listar_motivos(db: Session = Depends(get_db), contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)):
+    """Obtiene la lista de todos los motivos de la empresa."""
+    return repository_motivoajuste.get_all(db, id_emp=contexto.id_emp)
 
 @router.get("/pagination", response_model=schema_ajuste.PaginatedMotivoAjusteResponse)
 def list_motivos_paginacion(
@@ -27,8 +25,8 @@ def list_motivos_paginacion(
     size: int = Query(10, ge=1),
     texto: str = Query(None),
     db: Session = Depends(get_db),
-    usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
-    return repository_motivoajuste.get_motivos_paginated(db, page, size, texto)
+    contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)):
+    return repository_motivoajuste.get_motivos_paginated(db, page, size, contexto.id_emp, texto)
 
 @router.get("/search", response_model=schema_ajuste.MotivoAjusteResponse)
 def obtener_motivo(id_motivo: int, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
@@ -39,12 +37,13 @@ def obtener_motivo(id_motivo: int, db: Session = Depends(get_db), usuario_autent
     return db_motivo
 
 @router.post("/save")
-def crear_motivo(motivo: schema_ajuste.MotivoAjusteCreate, id_emp: int, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
+def crear_motivo(motivo: schema_ajuste.MotivoAjusteCreate, db: Session = Depends(get_db), contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)):
     """Crea un nuevo motivo y retorna el objeto con su ID generado.
     No se atrapa la excepción aquí a propósito: así los errores de integridad
     (ej. codMotivo duplicado) los resuelve el manejador global de IntegrityError
     con un mensaje amigable, en una sola llamada."""
-    verificar_permiso(db, usuario_autenticado.id_usuario, id_emp, MENU_CODIGO, "CREAR")
+    motivo.id_emp = contexto.id_emp  # ignora el id_emp que mande el cliente en el body
+    verificar_permiso(db, contexto.usuario.id_usuario, contexto.id_emp, MENU_CODIGO, "CREAR")
     repository_motivoajuste.create_motivo(db=db, obj=motivo)
     return {
         "status": "success",
@@ -53,13 +52,17 @@ def crear_motivo(motivo: schema_ajuste.MotivoAjusteCreate, id_emp: int, db: Sess
     }
 
 @router.put("/edit")
-def actualizar_motivo(id_motivo: int, id_emp: int, motivo: schema_ajuste.MotivoAjusteCreate, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
+def actualizar_motivo(id_motivo: int, motivo: schema_ajuste.MotivoAjusteCreate, db: Session = Depends(get_db), contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)):
     """Actualiza los datos de un motivo existente."""
     db_motivo = repository_motivoajuste.get_motivo(db, id_motivo=id_motivo)
     if db_motivo is None:
         raise HTTPException(status_code=404, detail="Motivo no encontrado")
-    verificar_permiso(db, usuario_autenticado.id_usuario, id_emp, MENU_CODIGO, "EDITAR")
+    if db_motivo.id_emp != contexto.id_emp:
+        # No es de la empresa activa de la sesión: se trata como si no existiera
+        raise HTTPException(status_code=404, detail="Motivo no encontrado")
+    verificar_permiso(db, contexto.usuario.id_usuario, contexto.id_emp, MENU_CODIGO, "EDITAR")
 
+    motivo.id_emp = contexto.id_emp  # ignora el id_emp que mande el cliente en el body
     repository_motivoajuste.update_motivo(db, id_motivo=id_motivo, obj=motivo)
     return {
         "status": "success",
@@ -68,10 +71,13 @@ def actualizar_motivo(id_motivo: int, id_emp: int, motivo: schema_ajuste.MotivoA
     }
 
 @router.delete("/delete", status_code=status.HTTP_204_NO_CONTENT)
-def eliminar_motivo(id_motivo: int, id_emp: int, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
+def eliminar_motivo(id_motivo: int, db: Session = Depends(get_db), contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)):
     """Elimina un motivo del sistema."""
-    verificar_permiso(db, usuario_autenticado.id_usuario, id_emp, MENU_CODIGO, "ELIMINAR")
-    success = repository_motivoajuste.delete_motivo(db, id_motivo=id_motivo)
-    if not success:
+    db_motivo = repository_motivoajuste.get_motivo(db, id_motivo=id_motivo)
+    if db_motivo is None:
         raise HTTPException(status_code=404, detail="Motivo no encontrado")
+    if db_motivo.id_emp != contexto.id_emp:
+        raise HTTPException(status_code=404, detail="Motivo no encontrado")
+    verificar_permiso(db, contexto.usuario.id_usuario, contexto.id_emp, MENU_CODIGO, "ELIMINAR")
+    repository_motivoajuste.delete_motivo(db, id_motivo=id_motivo)
     return None

@@ -1,5 +1,5 @@
 from datetime import datetime
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -82,11 +82,9 @@ def obtener_carga(id_trans: int, db: Session = Depends(get_db), usuario_autentic
         raise HTTPException(status_code=404, detail="Carga no encontrada")
     return db_carga
 
-
-@router.delete("/delete", status_code=status.HTTP_204_NO_CONTENT)
-def eliminar_carga(id_trans: int, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
-    """Elimina una carga masiva del sistema (revierte su impacto en el stock/costos). No tiene edicion."""
-    success = repository_cargastock.delete_carga_stock(db, id_trans=id_trans)
-    if not success:
-        raise HTTPException(status_code=404, detail="Carga no encontrada")
-    return None
+# No hay edicion ni eliminacion a proposito: este modulo es para la carga inicial de
+# inventario, no una operacion recurrente. Permitir borrar obligaria a revertir
+# p_precios (arriesgado: puede pisar cambios de precio posteriores legitimos, y las
+# reglas de categoria ya propagaron a otras listas con su propio id_trans) y a validar
+# que el stock no quede negativo por ventas/bajas que hayan ocurrido despues en la
+# misma bodega — control que este modulo no esta pensado para hacer.

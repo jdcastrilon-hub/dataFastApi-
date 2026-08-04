@@ -13,7 +13,12 @@ class Menu(Base):
     descripcion = Column(String(250), nullable=True)
     ruta = Column(String(250), nullable=True)
     icono = Column(String(100), nullable=True)
-    id_padre = Column(Integer, ForeignKey("public.md_menu.id_menu"), nullable=True)
+    # Auto-referencia: Menu no declara __table_args__ de schema (a diferencia de
+    # casi todo lo demas en este codebase), asi que se registra en SQLAlchemy
+    # bajo la clave "md_menu" a secas, no "public.md_menu" - por eso esta FK
+    # tiene que ser sin el prefijo "public.", o falla al configurar mappers
+    # (mismo gotcha ya documentado para MenuPermiso.id_menu).
+    id_padre = Column(Integer, ForeignKey("md_menu.id_menu"), nullable=True)
     orden = Column(Integer, nullable=False, default=0)
     visible = Column(Boolean, nullable=False, default=True)
     activo = Column(Boolean, nullable=False, default=True)

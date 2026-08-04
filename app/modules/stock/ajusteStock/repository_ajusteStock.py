@@ -1,9 +1,11 @@
 from sqlalchemy import cast, desc, or_, String, text
+from sqlalchemy.exc import DataError, IntegrityError
 from sqlalchemy.orm import Session, joinedload
 from . import models, schema_ajusteStock
 from app.modules.stock.bodegas import model_bodega
 from app.modules.core.sucursales import model_sucursal
 from app.core.numeradores import repository_numerador
+from app.exceptions import TransaccionValidationError
 
 # Máximo de entradas de auditoría que se conservan en el jsonb "logs".
 MAX_LOGS_AUDITORIA = 10
@@ -37,8 +39,8 @@ def _siguiente_nro_docum(db: Session, id_bodega: int, nro_docum_manual):
     return siguiente if siguiente is not None else nro_docum_manual
 
 #Paginacion
-def get_ajustes_paginated(db: Session, page: int, size: int, texto: str = None):
-    query = db.query(models.AjusteStock)
+def get_ajustes_paginated(db: Session, page: int, size: int, id_emp: int, texto: str = None):
+    query = db.query(models.AjusteStock).filter(models.AjusteStock.id_emp == id_emp)
 
     # Filtro de busqueda por numero de documento u observacion (si el usuario escribio algo)
     if texto:
@@ -143,14 +145,30 @@ def create_ajustestock(db: Session, obj: schema_ajusteStock.AjusteStockCreate):
             {"operacion": "N", "parm_trans": bd_cabecera.id_trans}
         )
 
+        # 4. Control de transaccion: punto unico de validacion (hoy solo controla
+        # stock negativo via sp_general_control_stock, pero cualquier chequeo
+        # transversal que se agregue ahi a futuro - cartera, etc. - aplica aqui
+        # tambien sin tocar este archivo).
+        db.execute(
+            text("CALL public.sp_general_control_transacciones(:parm_trans)"),
+            {"parm_trans": bd_cabecera.id_trans}
+        )
+
         db.commit()
         db.refresh(bd_cabecera)
 
         return bd_cabecera
 
-    except Exception:
+    except (IntegrityError, DataError):
+        # No se envuelve: se deja que el manejador global responda con el mensaje
+        # amigable especifico (IntegrityError/DataError ya tienen su propio handler).
         db.rollback()
         raise
+    except Exception as e:
+        # Errores de negocio lanzados por el SP (sp_general_control_stock haciendo
+        # RAISE EXCEPTION 'ERR_VAL: ...'), no violaciones de integridad.
+        db.rollback()
+        raise TransaccionValidationError(str(e.orig))
 
 # Actualizar un ajuste existente
 def update_ajustestock(db: Session, id_trans: int, obj: schema_ajusteStock.AjusteStockCreate):
@@ -206,13 +224,22 @@ def update_ajustestock(db: Session, id_trans: int, obj: schema_ajusteStock.Ajust
             {"operacion": "E", "parm_trans": id_trans}
         )
 
+        # 4. Control de transaccion (ver nota en create_ajustestock)
+        db.execute(
+            text("CALL public.sp_general_control_transacciones(:parm_trans)"),
+            {"parm_trans": id_trans}
+        )
+
         db.commit()
         db.refresh(bd_cabecera)
         return bd_cabecera
 
-    except Exception:
+    except (IntegrityError, DataError):
         db.rollback()
         raise
+    except Exception as e:
+        db.rollback()
+        raise TransaccionValidationError(str(e.orig))
 
 # Eliminar un ajuste (revierte también su impacto en el stock)
 def delete_ajustestock(db: Session, id_trans: int):
@@ -221,11 +248,13 @@ def delete_ajustestock(db: Session, id_trans: int):
         return None
 
     try:
-        # 1. Revertimos el impacto que este ajuste dejó en el stock
+        # 1. Revertimos el impacto que este ajuste dejó en el stock y en el costo
         db.execute(text("DELETE FROM p_stock WHERE id_trans = :id_trans"), {"id_trans": id_trans})
+        db.execute(text("DELETE FROM p_costos WHERE id_trans = :id_trans"), {"id_trans": id_trans})
 
-        # 2. Borramos el detalle, el staging de lotes nuevos (si quedo alguno) y la cabecera
-        db.query(models.DetalleAjusteStock).filter(models.DetalleAjusteStock.id_trans == id_trans).delete()
+        # 2. Borramos el staging de lotes nuevos (si quedo alguno, no tiene relationship
+        # ORM) y la cabecera (cascade="all, delete-orphan" en la relacion se encarga
+        # del detalle)
         db.query(models.DetalleAjusteStockNuevoLote).filter(models.DetalleAjusteStockNuevoLote.id_trans == id_trans).delete()
         db.delete(bd_cabecera)
 

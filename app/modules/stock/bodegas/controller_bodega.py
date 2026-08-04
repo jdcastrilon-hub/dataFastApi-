@@ -8,27 +8,21 @@ from app.core.auth import security
 from app.core.auth.permisos import verificar_permiso
 
 # Codigo del formulario en md_menu (matriz de permisos). m_bodegas no tiene
-# columna id_emp propia (catalogo global) - el id_emp de estos endpoints es
-# solo para el chequeo de permiso, no se persiste en la tabla.
+# columna id_emp propia - se resuelve via bodega -> sucursal -> empresa
+# (ver get_bodegas_paginated). El id_emp de estos endpoints tambien se usa
+# para el chequeo de permiso.
 MENU_CODIGO = "INV_BOD"
 
 router = APIRouter(
     prefix="/bodega/bodegas",
     tags=["Stock - Bodegas"])
-#skip: int = 0: Es un parámetro de consulta (Query Param). Le dice a la base de datos cuántos registros saltarse. Útil para la paginación (ej. saltarse los primeros 20).
-#limit: int = 100: Define el máximo de registros a devolver por "página". Por defecto, si el usuario no envía nada, traerá 100.
 #Session = Depends(get_db) : Dependencia de base de datos
 #""" = Documentacion del API
 
-@router.get("/list", response_model=List[schema_bodega.BodegaResponse])
-def listar_bodegas(page: int = 0, size: int = 100, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
-    """Obtiene la lista de todas las bodegas."""
-    return repository_bodega.get_bodegas(db, skip=page, limit=size)
-
 @router.get("/listCombo", response_model=List[schema_bodega.BodegaCombo])
-def listar_bodegas(db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
-    """Obtiene la lista de todas las bodegas."""
-    return repository_bodega.get_bodegas_combo(db)
+def listar_bodegas(db: Session = Depends(get_db), contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)):
+    """Obtiene la lista de bodegas de la empresa activa."""
+    return repository_bodega.get_bodegas_combo(db, contexto.id_emp)
 
 
 @router.get("/pagination", response_model=schema_bodega.PaginatedBodegaResponse)
@@ -37,8 +31,8 @@ def list_bodegas_paginacion(
     size: int = Query(10, ge=1),
     texto: str = Query(None),
     db: Session = Depends(get_db),
-    usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
-    return repository_bodega.get_bodegas_paginated(db, page, size, texto)
+    contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)):
+    return repository_bodega.get_bodegas_paginated(db, page, size, contexto.id_emp, texto)
 
 @router.get("/search", response_model=schema_bodega.BodegaResponse)
 def obtener_bodega(bodega_id: int, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
@@ -50,12 +44,12 @@ def obtener_bodega(bodega_id: int, db: Session = Depends(get_db), usuario_autent
 
 
 @router.post("/save")
-def crear_bodega(bodega: schema_bodega.BodegaCreate, id_emp: int, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
+def crear_bodega(bodega: schema_bodega.BodegaCreate, db: Session = Depends(get_db), contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)):
     """Crea una nueva bodega y retorna el objeto con su ID generado.
     No se atrapa la excepción aquí a propósito: así los errores de integridad
     (ej. codBodega duplicado) los resuelve el manejador global de IntegrityError
     con un mensaje amigable, en una sola llamada (sin endpoint de validación previa)."""
-    verificar_permiso(db, usuario_autenticado.id_usuario, id_emp, MENU_CODIGO, "CREAR")
+    verificar_permiso(db, contexto.usuario.id_usuario, contexto.id_emp, MENU_CODIGO, "CREAR")
     repository_bodega.create_bodega(db=db, bodega=bodega)
     return {
         "status": "success",
@@ -64,12 +58,12 @@ def crear_bodega(bodega: schema_bodega.BodegaCreate, id_emp: int, db: Session = 
     }
 
 @router.put("/edit")
-def actualizar_bodega(bodega_id: int, id_emp: int, bodega: schema_bodega.BodegaCreate, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
+def actualizar_bodega(bodega_id: int, bodega: schema_bodega.BodegaCreate, db: Session = Depends(get_db), contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)):
     """Actualiza los datos de una bodega existente (ver nota en crear_bodega sobre el manejo de errores)."""
     db_bodega = repository_bodega.get_bodega(db, bodega_id=bodega_id)
     if db_bodega is None:
         raise HTTPException(status_code=404, detail="Bodega no encontrada")
-    verificar_permiso(db, usuario_autenticado.id_usuario, id_emp, MENU_CODIGO, "EDITAR")
+    verificar_permiso(db, contexto.usuario.id_usuario, contexto.id_emp, MENU_CODIGO, "EDITAR")
 
     repository_bodega.update_bodega(db, bodega_id=bodega_id, bodega_data=bodega)
     return {
@@ -79,9 +73,9 @@ def actualizar_bodega(bodega_id: int, id_emp: int, bodega: schema_bodega.BodegaC
     }
 
 @router.delete("/delete", status_code=status.HTTP_204_NO_CONTENT)
-def eliminar_bodega(bodega_id: int, id_emp: int, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
+def eliminar_bodega(bodega_id: int, db: Session = Depends(get_db), contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)):
     """Elimina una bodega del sistema."""
-    verificar_permiso(db, usuario_autenticado.id_usuario, id_emp, MENU_CODIGO, "ELIMINAR")
+    verificar_permiso(db, contexto.usuario.id_usuario, contexto.id_emp, MENU_CODIGO, "ELIMINAR")
     success = repository_bodega.delete_bodega(db, bodega_id=bodega_id)
     if not success:
         raise HTTPException(status_code=404, detail="Bodega no encontrada")
@@ -97,3 +91,16 @@ def get_stock_disponible(
     usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)
 ):
     return repository_bodega.get_stock_disponible(db,idArticulo,idCodbarra, idBodega, idEstado)
+
+@router.get("/stockDisponibleMasivo", response_model=List[schema_bodega.StockDisponibleMasivoResponse])
+def get_stock_disponible_masivo(
+    idBodega: int,
+    idEstado: int,
+    cadena: str,
+    db: Session = Depends(get_db),
+    usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)
+):
+    """Recalcula el stock de varios codigos de barra (separados por '-') en una sola
+    consulta, contra una bodega/estado puntual. Usado al cambiar de bodega/estado en
+    una grilla que ya tiene articulos cargados (ajustestock/traslado)."""
+    return repository_bodega.get_stock_disponible_masivo(db, idBodega, idEstado, cadena)

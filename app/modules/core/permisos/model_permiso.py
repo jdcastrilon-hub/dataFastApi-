@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, Date, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -15,6 +15,20 @@ class Modulo(Base):
     icono = Column(String(100), nullable=True)
     orden = Column(Integer, nullable=False, default=0)
     activo = Column(Boolean, nullable=False, default=True)
+
+
+# Habilitacion de modulos por empresa - autoservicio del superadmin de cada
+# empresa (no una accion de plataforma). Polaridad opt-out: sin fila para
+# (id_emp, id_modulo), el modulo se considera habilitado - ver
+# docs/tecnica/specs/core/delegacion-permisos-menu-exclusivo.md.
+class EmpresaXModulo(Base):
+    __tablename__ = "md_empresaxmodulo"
+    __table_args__ = {"schema": "public"}
+
+    id_emp = Column(Integer, ForeignKey("public.md_empresas.id_emp"), primary_key=True)
+    id_modulo = Column(Integer, ForeignKey("public.md_modulo.id_modulo"), primary_key=True)
+    activo = Column(Boolean, nullable=False, default=True)
+    fecha_activacion = Column(Date, nullable=True)
 
 
 class Permiso(Base):

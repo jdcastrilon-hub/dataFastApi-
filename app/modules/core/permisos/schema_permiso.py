@@ -32,8 +32,22 @@ class FormularioMatriz(BaseModel):
 
 class GuardarMatrizRequest(BaseModel):
     id_rol: int = Field(alias="idRol")
-    id_emp: int = Field(alias="idEmp")
     id_modulo: int = Field(alias="idModulo")
     otorgados: List[int] = Field(default=[], alias="otorgados")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+# Habilitacion de modulos por empresa (autoservicio del superadmin) - ver
+# docs/tecnica/specs/core/delegacion-permisos-menu-exclusivo.md, Pieza 1.
+class ModuloEmpresaResponse(BaseModel):
+    id_modulo: int = Field(alias="idModulo")
+    nombre: str = Field(alias="nombre")
+    activo: bool = Field(alias="activo")
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+class ModuloEmpresaUpdate(BaseModel):
+    id_modulo: int = Field(alias="idModulo")
+    activo: bool = Field(alias="activo")
 
     model_config = ConfigDict(populate_by_name=True)

@@ -14,7 +14,6 @@ from app.modules.stock.ajusteStock.controller_ajusteStock import router as ajust
 from app.modules.stock.estados.controller_estado import router as estados
 from app.modules.stock.trasladostock.controller_trasladoStock import router as traslado
 from app.modules.stock.cargastock.controller_cargastock import router as cargastock
-from app.modules.stock.reporteInventario.controller_reporteinventario import router as reporteinventario
 from app.modules.stock.tiposervicio.controller_servicios import router as tiposervicio
 from app.modules.stock.monitorstock.controller_monitor import router as monitorstock
 from app.modules.core.empresas.controller_empresa import router as empresas
@@ -37,6 +36,7 @@ from app.modules.comercial.clientes.controller_cliente import router as cliente
 from app.modules.comercial.ventas.controller_ventas import router as ventas
 from app.modules.comercial.mediopago.controller_medio import router as mediopagos
 from app.modules.comercial.cajas.controller_cajas import router as cajas
+from app.modules.comercial.listaprecio.controller_listaprecio import router as listaprecio
 from app.modules.comercial.turnos.controller_turno import router as turno
 from app.modules.comercial.cierreturno.controller_cierreturno import router as cierreturno
 from app.modules.comercial.movimientocaja.controller_movcaja import router as movimientocaja
@@ -50,13 +50,14 @@ from fastapi.middleware.cors import CORSMiddleware
  
 app = FastAPI(title="Mi ERP API")
 
-#URL de entrada permitida
-origins = [
-    "http://localhost:4200",
-]
+# Origen(es) de entrada permitidos: localhost, o cualquier IP de red privada
+# (192.168.x.x / 10.x.x.x / 172.16-31.x.x) en el puerto 4200 - permite acceder
+# desde otro PC de la misma red local sin tener que hardcodear una IP puntual
+# que cambia con el DHCP.
+ORIGIN_PATTERN = r"^http://(localhost|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}):4200$"
 
 # exeptiones del sistema
-add_exception_handlers(app, allowed_origins=origins)
+add_exception_handlers(app, allowed_origin_pattern=ORIGIN_PATTERN)
 
 # Registrar los módulos (Como si fueran Controllers en Spring)
 #app.include_router(stock_router)
@@ -68,7 +69,7 @@ def health_check():
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origin_regex=ORIGIN_PATTERN,
     allow_credentials=True,
     allow_methods=["*"], # Permite GET, POST, PUT, DELETE, etc.
     allow_headers=["*"], # Permite todos los headers
@@ -95,7 +96,6 @@ app.include_router(provedor)
 app.include_router(compra)
 app.include_router(traslado)
 app.include_router(cargastock)
-app.include_router(reporteinventario)
 app.include_router(monitorcompras)
 app.include_router(tiposervicio)
 app.include_router(monitorstock)
@@ -106,6 +106,7 @@ app.include_router(cliente)
 app.include_router(ventas)
 app.include_router(mediopagos)
 app.include_router(cajas)
+app.include_router(listaprecio)
 app.include_router(turno)
 app.include_router(cierreturno)
 app.include_router(movimientocaja)

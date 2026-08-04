@@ -66,9 +66,9 @@ def eliminar_negocio(id_negocio: int, id_emp: int, db: Session = Depends(get_db)
     return None
 
 @router.get("/listByNegocios", response_model=schema_negocio.NegocioxCategoriasDTO)
-def listar_negocios_y_categorias(id_empresa: int,db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
+def listar_negocios_y_categorias(id_empresa: int,db: Session = Depends(get_db),  contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)):
 
-    data = repository_negocios.get_negocios_con_categorias_por_empresa(db,id_empresa)
+    data = repository_negocios.get_negocios_con_categorias_por_empresa(db,contexto.id_emp)
     
     if not data:
         # Devolver lista vacia , si no hay data

@@ -1,6 +1,7 @@
 from sqlalchemy import desc, or_, text
 from sqlalchemy.orm import Session
 from . import model_bodega, schema_bodega
+from app.modules.core.sucursales import model_sucursal
 
 # Máximo de entradas de auditoría que se conservan en el jsonb "logs".
 # Se aplica aquí (y no solo en el frontend) para que quede garantizado sin
@@ -12,13 +13,15 @@ def _limitar_logs(logs):
         return logs
     return logs[-MAX_LOGS_AUDITORIA:]
 
-# Obtener todas las bodegas ordenadas de mayor a menor
-def get_bodegas(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(model_bodega.Bodega).order_by(desc(model_bodega.Bodega.fecha_mod)).offset(skip).limit(limit).all()
-
-# Obtener todas las bodegas
-def get_bodegas_combo(db: Session):
-    return db.query(model_bodega.Bodega).all()
+# Obtener todas las bodegas de la empresa (bodega principal primero, luego el resto por nombre)
+def get_bodegas_combo(db: Session, id_emp: int):
+    # m_bodegas no tiene columna id_emp propia - se filtra via bodega -> sucursal -> empresa.
+    return db.query(model_bodega.Bodega).join(
+        model_sucursal.Sucursal, model_bodega.Bodega.id_sucursal == model_sucursal.Sucursal.id
+    ).filter(model_sucursal.Sucursal.id_emp == id_emp , model_bodega.Bodega.activo == True).order_by(
+        desc(model_bodega.Bodega.principal),
+        model_bodega.Bodega.nom_bodega
+    ).all()
 
 # Obtener una bodega por ID
 def get_bodega(db: Session, bodega_id: int):
@@ -59,8 +62,11 @@ def delete_bodega(db: Session, bodega_id: int):
     return db_bodega
 
 #Paginacion
-def get_bodegas_paginated(db: Session, page: int, size: int, texto: str = None):
-    query = db.query(model_bodega.Bodega)
+def get_bodegas_paginated(db: Session, page: int, size: int, id_emp: int, texto: str = None):
+    # m_bodegas no tiene columna id_emp propia - se filtra via bodega -> sucursal -> empresa.
+    query = db.query(model_bodega.Bodega).join(
+        model_sucursal.Sucursal, model_bodega.Bodega.id_sucursal == model_sucursal.Sucursal.id
+    ).filter(model_sucursal.Sucursal.id_emp == id_emp)
 
     # Filtro de busqueda por codigo o nombre (si el usuario escribio algo)
     if texto:
@@ -107,4 +113,20 @@ def get_stock_disponible(db: Session, idArticulo: int,idCodbarra: int, idBodega:
     })
         
     # Convertimos los resultados a diccionarios para que Pydantic los valide
+    return result.mappings().all()
+
+# Recalculo masivo de stock (una sola consulta para varios codigos de barra, contra
+# una bodega/estado puntual) - usado cuando el usuario cambia de bodega/estado en una
+# grilla que ya tiene articulos cargados (ajustestock/traslado), en vez de una
+# consulta por fila.
+def get_stock_disponible_masivo(db: Session, id_bodega: int, id_estado: int, cadena_codigos: str):
+    query = text("""
+        SELECT idcodbarra, stock
+        FROM public.articulo_obtener_stock_masivo_bodega(:param_bodega_id, :param_estado_id, :param_cadena)
+    """)
+    result = db.execute(query, {
+        "param_bodega_id": id_bodega,
+        "param_estado_id": id_estado,
+        "param_cadena": cadena_codigos
+    })
     return result.mappings().all()

@@ -69,3 +69,27 @@ def actualizar_usuario(usuario_id: int, id_emp: int, db_usuario: esquema_usuario
         "message": "Usuario editado exitosamente",
         "data": None
     }
+
+@router.get("/mi-perfil", response_model=esquema_usuario.MiPerfilResponse)
+def obtener_mi_perfil(id_emp: int, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
+    """Datos propios del usuario logueado (modal 'Mi Perfil' del toolbar): su
+    md_usuarios + m_personas, mas los roles que tiene en la empresa activa."""
+    perfil = repository_usuario.get_mi_perfil(db, id_usuario=usuario_autenticado.id_usuario, id_emp=id_emp)
+    if perfil is None:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    return perfil
+
+@router.put("/mi-perfil")
+def actualizar_mi_perfil(obj: esquema_usuario.MiPerfilUpdate, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
+    """Edita los datos propios del usuario logueado. Sin verificar_permiso: cada
+    usuario siempre puede editar su propio perfil, no es un permiso administrable.
+    id_usuario sale del JWT, nunca de un parametro - no se puede editar el perfil
+    de otro usuario desde aca (ver nota en create_usuario sobre manejo de errores)."""
+    db_usuario = repository_usuario.update_mi_perfil(db, id_usuario=usuario_autenticado.id_usuario, obj=obj)
+    if db_usuario is None:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    return {
+        "status": "success",
+        "message": "Perfil actualizado exitosamente",
+        "data": None
+    }

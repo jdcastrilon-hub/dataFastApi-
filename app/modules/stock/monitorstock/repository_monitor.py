@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session, contains_eager , joinedload
 from app.modules.core.negocios import model_negocios
 from app.modules.stock.categorias import models
 from app.modules.core.sucursales import model_sucursal
+from app.modules.stock.estados import model_estado
 
 def get_filtros_vista_inventario(db: Session, id_empresa: int):
         # 1. Obtenemos todos los negocios de la empresa
@@ -23,6 +24,8 @@ def get_filtros_vista_inventario(db: Session, id_empresa: int):
                     .filter(model_sucursal.Sucursal.id_emp == id_empresa)\
                     .all()
 
+        # 4. Obtenemos todos los estados de la empresa (Disponible, Reserva, etc.)
+        estados = db.query(model_estado.Estado).filter(model_estado.Estado.id_emp == id_empresa).all()
 
         # 3. Mapeamos la lista de objetos Negocio al formato del DTO
         # Inyectamos la lista de categorías en cada negocio
@@ -30,21 +33,22 @@ def get_filtros_vista_inventario(db: Session, id_empresa: int):
                 "idEmpresa": id_empresa,
                 "listnegocio": negocios,
                 "listsucursales":sucursales,
-                "listCategorias":categorias
+                "listCategorias":categorias,
+                "listestados": estados
         }
         
 
 
 
-def get_monitorinventario_data(db: Session, id_emp: int, bodega : str, negocio :str , categoria : str,subcategoria : str,page: int, size: int, articulos: list[int] | None = None):
+def get_monitorinventario_data(db: Session, id_emp: int, bodega : str, negocio :str , categoria : str,subcategoria : str,page: int, size: int, articulos: list[int] | None = None, estado: str = "0"):
     print ("get_monitorinventario_data")
     print (size)
 
     # Lista vacia equivale a "sin filtro de articulos" (la funcion de Postgres espera NULL en ese caso)
     param_articulos = articulos if articulos else None
 
-    stats = db.execute(text("SELECT * FROM monitorstock_kpi(:param_id_emp, :param_bodega_id, :param_negocio_id, :param_categoria_id, :param_subcategoria_id, :param_articulos )"),
-                       {"param_id_emp": id_emp, "param_bodega_id": bodega, "param_negocio_id": negocio, "param_categoria_id": categoria , "param_subcategoria_id" : subcategoria, "param_articulos": param_articulos}).first()
+    stats = db.execute(text("SELECT * FROM monitorstock_kpi(:param_id_emp, :param_bodega_id, :param_negocio_id, :param_categoria_id, :param_subcategoria_id, :param_articulos, :param_estado_id )"),
+                       {"param_id_emp": id_emp, "param_bodega_id": bodega, "param_negocio_id": negocio, "param_categoria_id": categoria , "param_subcategoria_id" : subcategoria, "param_articulos": param_articulos, "param_estado_id": estado}).first()
 
     # 3. Construyes el JSON de UI
     kpis = []
@@ -55,8 +59,8 @@ def get_monitorinventario_data(db: Session, id_emp: int, bodega : str, negocio :
     print (offset)
     # Llamada directa a la función de Postgres
     result = db.execute(
-        text("SELECT * FROM monitorstock_vista1(:param_id_emp, :param_bodega_id, :param_negocio_id, :param_categoria_id, :param_subcategoria_id , :param_limit, :param_pagina, :param_articulos)"),
-         {"param_id_emp": id_emp, "param_bodega_id": bodega, "param_negocio_id": negocio, "param_categoria_id": categoria , "param_subcategoria_id" : subcategoria , "param_limit":size,"param_pagina": offset, "param_articulos": param_articulos}
+        text("SELECT * FROM monitorstock_vista1(:param_id_emp, :param_bodega_id, :param_negocio_id, :param_categoria_id, :param_subcategoria_id , :param_limit, :param_pagina, :param_articulos, true, :param_estado_id)"),
+         {"param_id_emp": id_emp, "param_bodega_id": bodega, "param_negocio_id": negocio, "param_categoria_id": categoria , "param_subcategoria_id" : subcategoria , "param_limit":size,"param_pagina": offset, "param_articulos": param_articulos, "param_estado_id": estado}
     ).all()
    
     # Convertir a una lista de dicts para el JSON
@@ -83,12 +87,12 @@ def get_kardex_articulo(db: Session, id_articulo: int, id_codbarra: int, fecha_i
     return [row._mapping for row in result]
 
 
-def get_inventario_export_data(db: Session, id_emp: int, bodega: str, negocio: str, categoria: str, subcategoria: str, articulos: list[int] | None = None):
+def get_inventario_export_data(db: Session, id_emp: int, bodega: str, negocio: str, categoria: str, subcategoria: str, articulos: list[int] | None = None, estado: str = "0"):
     param_articulos = articulos if articulos else None
     # param_incluir_limite=false: misma funcion y mismos filtros que la grilla paginada, pero trae todas las filas
     return db.execute(
-        text("SELECT * FROM monitorstock_vista1(:param_id_emp, :param_bodega_id, :param_negocio_id, :param_categoria_id, :param_subcategoria_id, :param_limit, :param_pagina, :param_articulos, false)"),
-        {"param_id_emp": id_emp, "param_bodega_id": bodega, "param_negocio_id": negocio, "param_categoria_id": categoria, "param_subcategoria_id": subcategoria, "param_limit": 0, "param_pagina": 0, "param_articulos": param_articulos}
+        text("SELECT * FROM monitorstock_vista1(:param_id_emp, :param_bodega_id, :param_negocio_id, :param_categoria_id, :param_subcategoria_id, :param_limit, :param_pagina, :param_articulos, false, :param_estado_id)"),
+        {"param_id_emp": id_emp, "param_bodega_id": bodega, "param_negocio_id": negocio, "param_categoria_id": categoria, "param_subcategoria_id": subcategoria, "param_limit": 0, "param_pagina": 0, "param_articulos": param_articulos, "param_estado_id": estado}
     ).all()
 
 

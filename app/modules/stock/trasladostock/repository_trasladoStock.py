@@ -1,9 +1,11 @@
 from sqlalchemy import cast, desc, or_, String, text
+from sqlalchemy.exc import DataError, IntegrityError
 from sqlalchemy.orm import Session, joinedload
 from . import models, schema_trasladoStock
 from app.modules.stock.bodegas import model_bodega
 from app.modules.core.sucursales import model_sucursal
 from app.core.numeradores import repository_numerador
+from app.exceptions import TransaccionValidationError
 
 # Máximo de entradas de auditoría que se conservan en el jsonb "logs".
 MAX_LOGS_AUDITORIA = 10
@@ -37,8 +39,8 @@ def _siguiente_nro_docum(db: Session, id_bodega_origen: int, nro_docum_manual):
     return siguiente if siguiente is not None else nro_docum_manual
 
 #Paginacion
-def get_traslados_paginated(db: Session, page: int, size: int, texto: str = None):
-    query = db.query(models.TrasladoStock)
+def get_traslados_paginated(db: Session, page: int, size: int, id_emp: int, texto: str = None):
+    query = db.query(models.TrasladoStock).filter(models.TrasladoStock.id_emp == id_emp)
 
     # Filtro de busqueda por numero de documento u observacion (si el usuario escribio algo)
     if texto:
@@ -133,14 +135,28 @@ def create_trasladobodega(db: Session, obj: schema_trasladoStock.TrasladoStockCr
             {"operacion": "N", "parm_trans": bd_cabecera.id_trans}
         )
 
+        # 4. Control de transaccion: punto unico de validacion (hoy solo controla
+        # stock negativo via sp_general_control_stock, pero cualquier chequeo
+        # transversal que se agregue ahi a futuro - cartera, etc. - aplica aqui
+        # tambien sin tocar este archivo).
+        db.execute(
+            text("CALL public.sp_general_control_transacciones(:parm_trans)"),
+            {"parm_trans": bd_cabecera.id_trans}
+        )
+
         db.commit()
         db.refresh(bd_cabecera)
 
         return bd_cabecera
 
-    except Exception:
+    except (IntegrityError, DataError):
         db.rollback()
         raise
+    except Exception as e:
+        # Errores de negocio lanzados por el SP (sp_general_control_stock haciendo
+        # RAISE EXCEPTION 'ERR_VAL: ...'), no violaciones de integridad.
+        db.rollback()
+        raise TransaccionValidationError(str(e.orig))
 
 # Actualizar un traslado existente
 def update_trasladobodega(db: Session, id_trans: int, obj: schema_trasladoStock.TrasladoStockCreate):
@@ -186,13 +202,22 @@ def update_trasladobodega(db: Session, id_trans: int, obj: schema_trasladoStock.
             {"operacion": "E", "parm_trans": id_trans}
         )
 
+        # 4. Control de transaccion (ver nota en create_trasladobodega)
+        db.execute(
+            text("CALL public.sp_general_control_transacciones(:parm_trans)"),
+            {"parm_trans": id_trans}
+        )
+
         db.commit()
         db.refresh(bd_cabecera)
         return bd_cabecera
 
-    except Exception:
+    except (IntegrityError, DataError):
         db.rollback()
         raise
+    except Exception as e:
+        db.rollback()
+        raise TransaccionValidationError(str(e.orig))
 
 # Eliminar un traslado (revierte también su impacto en el stock)
 def delete_trasladobodega(db: Session, id_trans: int):
@@ -201,11 +226,12 @@ def delete_trasladobodega(db: Session, id_trans: int):
         return None
 
     try:
-        # 1. Revertimos el impacto que este traslado dejó en el stock (origen y destino)
+        # 1. Revertimos el impacto que este traslado dejó en el stock (origen y destino) y en el costo
         db.execute(text("DELETE FROM p_stock WHERE id_trans = :id_trans"), {"id_trans": id_trans})
+        db.execute(text("DELETE FROM p_costos WHERE id_trans = :id_trans"), {"id_trans": id_trans})
 
-        # 2. Borramos el detalle y la cabecera
-        db.query(models.DetalleTrasladoStock).filter(models.DetalleTrasladoStock.id_trans == id_trans).delete()
+        # 2. Borramos la cabecera (cascade="all, delete-orphan" en la relacion se
+        # encarga del detalle)
         db.delete(bd_cabecera)
 
         db.commit()

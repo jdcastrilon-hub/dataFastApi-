@@ -10,6 +10,7 @@ class LogEntry(BaseModel):
 
 # Esquema Molde
 class MotivoAjusteBase(BaseModel):
+    id_emp: int = Field(alias="idEmp")
     cod_motivo: str = Field(alias="codMotivo", max_length=10)
     nom_motivo: str = Field(alias="nomMotivo", max_length=80)
     signo: int = Field(alias="signo")

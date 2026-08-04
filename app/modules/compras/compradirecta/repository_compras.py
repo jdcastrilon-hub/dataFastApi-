@@ -19,9 +19,9 @@ def _siguiente_nro_docum(db: Session, id_emp: int, nro_docum_manual):
     siguiente = repository_numerador.siguiente_numerador(db, id_emp, CODIGO_NUMERADOR_COMPRA)
     return siguiente if siguiente is not None else nro_docum_manual
 
-#Paginacion
-def get_compras_paginated(db: Session, page: int, size: int, idempresa: int, texto: str = None):
-    query = db.query(models.Compra).filter(models.Compra.id_emp == idempresa)
+#Paginacion (filtrada por empresa)
+def get_compras_paginated(db: Session, page: int, size: int, id_emp: int, texto: str = None):
+    query = db.query(models.Compra).filter(models.Compra.id_emp == id_emp)
 
     # Filtro de busqueda por documento, remito o nombre del proveedor (si el usuario escribio algo)
     if texto:
@@ -153,10 +153,11 @@ def create_compra(db: Session, obj: schema_compras.CompraCreate) :
         if(obj.status=='F'):
             # 3. LLAMAR AL STORED PROCEDURE (Antes del commit)
             # Usamos el ID que acabamos de generar
+            usuario_mod = logs_dict[-1].get('usuario_mod') if logs_dict else None
             db.execute(
-                text("CALL public.sp_compradirecta(:operacion,:parm_trans)"), 
-                {"operacion": "N", "parm_trans": bd_compra.id_trans}
-            ) 
+                text("CALL public.sp_compradirecta(:operacion,:parm_trans,:usuario)"),
+                {"operacion": "N", "parm_trans": bd_compra.id_trans, "usuario": usuario_mod}
+            )
 
             #Control de transaccion
             db.execute(
@@ -223,10 +224,11 @@ def update_compra(db: Session, id_trans: int, obj: schema_compras.CompraCreate):
         # 5. Lógica del Store Procedure para Edición
         if obj.status == 'F':
             # Llamamos al SP con operación 'E' (Edit) o la que maneje tu lógica de Matrix
+            usuario_mod = bd_compra.logs[-1].get('usuario_mod') if bd_compra.logs else None
             db.execute(
-                text("CALL public.sp_compradirecta(:operacion, :parm_trans)"), 
-                {"operacion": "N", "parm_trans": id_trans}
-            )   
+                text("CALL public.sp_compradirecta(:operacion, :parm_trans, :usuario)"),
+                {"operacion": "N", "parm_trans": id_trans, "usuario": usuario_mod}
+            )
         
         db.commit()
         db.refresh(bd_compra)

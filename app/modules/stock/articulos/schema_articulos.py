@@ -9,8 +9,11 @@ class LogEntry(BaseModel):
     fecha_mod: str
 
 # Esquema Lista
-class ArticulosBase(BaseModel): 
+class ArticulosBase(BaseModel):
     id_articulo: Optional[int] = Field(alias="id_articulo")
+    # Se deriva de id_negocio.id_emp al crear/editar (ver repository_articulos);
+    # no se selecciona ni se envia desde el formulario.
+    id_emp: Optional[int] = Field(None, alias="idEmp")
     # Se autogenera desde el numerador de la empresa (ver CODIGO_NUMERADOR_ARTICULO);
     # opcional porque el formulario ya no lo tiene que enviar.
     cod_articulo: Optional[str] = Field(None, alias="codArticulo", max_length=30)
@@ -20,8 +23,8 @@ class ArticulosBase(BaseModel):
     id_subcategoria: int = Field(alias="idsubCategoria") 
     id_unidad: int = Field(alias="idunidad") 
     id_tiposervicio: int = Field(alias="idTipoService") 
-    id_impuesto: int = Field(alias="idImpuesto") 
-    id_ref: int = Field(alias="idRef")     
+    id_impuesto: Optional[int] = Field(None, alias="idImpuesto")
+    id_ref: Optional[int] = Field(None, alias="idRef")
     activo_stock: bool = Field(alias="activoStock")
     maneja_lote: bool = Field(False, alias="manejaLote")
     stock_min: Optional[int]  = Field(alias="stockMin")
@@ -56,48 +59,13 @@ class ArticuloCreate(ArticulosBase):
     pass
 
 
-#Esquema empresas con lista de negocios
-class ArticuloBaseCompleto(BaseModel):
-    id_articulo: int = Field(alias="idArticulo") 
-    cod_articulo: str = Field(alias="codArticulo", max_length=20)
-    nom_articulo: str = Field(alias="nomArticulo", max_length=80)
-    id_negocio : int = Field(alias="idNegocio")
-    negocio: Optional[Negocio] = None
-    subcategoria: Optional[SubCategoria] = None
-    unidad : Optional[Unidad]=None
-
-    model_config = ConfigDict(
-        from_attributes=True,  
-        populate_by_name=True   
-    )
-
 class Negocio(BaseModel):
     id: Optional[int] = Field(alias="idNegocio")
     cod_negocio:  str = Field(alias="Codnegocio", max_length=10)
     nom_negocio:  str = Field(alias="NomNegocio", max_length=100)
 
     model_config = ConfigDict(
-        from_attributes=True,  
-        populate_by_name=True
-    )
-
-class SubCategoria(BaseModel):
-    categoria_id: Optional[int] = Field(alias="idCategoria")
-    cod_subcategoria:  str = Field(alias="codSubcategoria", max_length=20)
-    nom_subcategoria:  str = Field(alias="nomSubcategoria", max_length=20)
-
-    model_config = ConfigDict(
-        from_attributes=True,  
-        populate_by_name=True
-    )
-
-class Unidad(BaseModel):
-    id: Optional[int] = Field(alias="idUnidad")
-    cod_unidad:  str = Field(alias="codUnidad", max_length=20)
-    nom_unidad:  str = Field(alias="nomUnidad", max_length=20)
-
-    model_config = ConfigDict(
-        from_attributes=True,  
+        from_attributes=True,
         populate_by_name=True
     )
 

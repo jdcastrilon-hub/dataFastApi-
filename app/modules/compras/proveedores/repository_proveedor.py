@@ -21,9 +21,9 @@ def get_proveedor(db: Session, proveedor_id: int):
         .options(joinedload(model_proveedor.Proveedor.persona))\
         .filter(model_proveedor.Proveedor.id_proveedor == proveedor_id).first()
 
-#Paginacion
-def get_proveedor_paginated(db: Session, page: int, size: int, texto: str = None):
-    query = db.query(model_proveedor.Proveedor)
+#Paginacion (filtrada por empresa)
+def get_proveedor_paginated(db: Session, page: int, size: int, id_emp: int, texto: str = None):
+    query = db.query(model_proveedor.Proveedor).filter(model_proveedor.Proveedor.id_emp == id_emp)
 
     # Filtro de busqueda por documento o razon social (si el usuario escribio algo)
     if texto:
@@ -53,10 +53,10 @@ def get_proveedor_paginated(db: Session, page: int, size: int, texto: str = None
         "size": size
     }
 
-def find_proveedores_by_query(db: Session, query: str):
+def find_proveedores_by_query(db: Session, id_emp: int, query: str):
         # Creamos el patrón para el LIKE: %query%
         search_filter = f"%{query}%"
-        
+
         return (
             db.query(
                 model_proveedor.Proveedor.id_proveedor.label("idProveedor"),
@@ -64,6 +64,7 @@ def find_proveedores_by_query(db: Session, query: str):
                 model_proveedor.Proveedor.cod_tit.label("codTit"),
                 model_proveedor.Proveedor.razon_social.label("nombreCompleto")
             )
+            .filter(model_proveedor.Proveedor.id_emp == id_emp)
             .filter(
                 or_(
                     model_proveedor.Proveedor.cod_tit.ilike(search_filter),

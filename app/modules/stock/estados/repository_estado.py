@@ -10,9 +10,9 @@ def _limitar_logs(logs):
         return logs
     return logs[-MAX_LOGS_AUDITORIA:]
 
-# Obtener todos los estados (usado por el combo)
-def get_estados(db: Session):
-    return db.query(model_estado.Estado).all()
+# Obtener todos los estados de la empresa (usado por el combo)
+def get_estados(db: Session, id_emp: int):
+    return db.query(model_estado.Estado).filter(model_estado.Estado.id_emp == id_emp).all()
 
 # Obtener un estado por ID
 def get_estado(db: Session, estado_id: int):
@@ -51,8 +51,8 @@ def delete_estado(db: Session, estado_id: int):
     return db_estado
 
 #Paginacion
-def get_estados_paginated(db: Session, page: int, size: int, texto: str = None):
-    query = db.query(model_estado.Estado)
+def get_estados_paginated(db: Session, page: int, size: int, id_emp: int, texto: str = None):
+    query = db.query(model_estado.Estado).filter(model_estado.Estado.id_emp == id_emp)
 
     # Filtro de busqueda por codigo o nombre (si el usuario escribio algo)
     if texto:

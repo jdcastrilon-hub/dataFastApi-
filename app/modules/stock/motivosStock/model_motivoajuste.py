@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, JSON
+from sqlalchemy import Column, Integer, String, DateTime, JSON, ForeignKey, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 import datetime
 from sqlalchemy.orm import relationship
@@ -6,10 +6,14 @@ from app.database import Base
 
 class MotivoAjuste(Base):
     __tablename__ = "m_motivoajuste"
-    __table_args__ = {"schema": "public"}
+    __table_args__ = (
+        UniqueConstraint('id_emp', 'cod_motivo', name='m_motivoajuste_unique'),
+        {"schema": "public"}
+    )
 
     id = Column(Integer, primary_key=True, index=True)
-    cod_motivo = Column(String(10), unique=True, nullable=False)
+    id_emp = Column(Integer, ForeignKey("public.md_empresas.id_emp"), nullable=False)
+    cod_motivo = Column(String(10), nullable=False)
     nom_motivo = Column(String(80), nullable=False)
     signo = Column(Integer, nullable=False)
     activo = Column(String(2), nullable=False)

@@ -10,8 +10,10 @@ def _limitar_logs(logs):
         return logs
     return logs[-MAX_LOGS_AUDITORIA:]
 
-def get_all(db: Session):
-        return db.query(model_motivoajuste.MotivoAjuste).all()
+def get_all(db: Session, id_emp: int):
+        return db.query(model_motivoajuste.MotivoAjuste)\
+            .filter(model_motivoajuste.MotivoAjuste.id_emp == id_emp)\
+            .all()
 
 # Obtener un motivo por ID
 def get_motivo(db: Session, id_motivo: int):
@@ -50,8 +52,9 @@ def delete_motivo(db: Session, id_motivo: int):
     return db_motivo
 
 #Paginacion
-def get_motivos_paginated(db: Session, page: int, size: int, texto: str = None):
-    query = db.query(model_motivoajuste.MotivoAjuste)
+def get_motivos_paginated(db: Session, page: int, size: int, id_emp: int, texto: str = None):
+    query = db.query(model_motivoajuste.MotivoAjuste)\
+        .filter(model_motivoajuste.MotivoAjuste.id_emp == id_emp)
 
     # Filtro de busqueda por codigo o nombre (si el usuario escribio algo)
     if texto:

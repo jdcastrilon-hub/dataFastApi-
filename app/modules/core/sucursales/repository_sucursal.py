@@ -15,9 +15,8 @@ def _limitar_logs(logs: list) -> list:
     return logs[-MAX_LOGS_AUDITORIA:]
 
 
-def get_sucursales(db: Session, page: int = 0, size: int = 100):
-    print(page)
-    return db.query(model_sucursal.Sucursal).offset(page).limit(size).all()
+def get_sucursales(db: Session, id_emp : int):    
+    return db.query(model_sucursal.Sucursal).filter(model_sucursal.Sucursal.id_emp==id_emp).all()
 
 
 # Paginacion: solo las sucursales de la empresa de la sesion actual (lista de la

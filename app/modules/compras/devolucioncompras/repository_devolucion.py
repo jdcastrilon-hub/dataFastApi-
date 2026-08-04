@@ -59,9 +59,9 @@ def get_devoluciones_paginated(db: Session, page: int, size: int, id_emp: int, t
 # texto filtra por numero de documento o remito (alimenta el autocompletar del
 # frontend, para que un proveedor con muchas compras sea buscable en vez de listarlas
 # todas de una vez).
-def get_compras_origen_by_proveedor(db: Session, id_proveedor: int, texto: str = None):
+def get_compras_origen_by_proveedor(db: Session, id_emp: int, id_proveedor: int, texto: str = None):
     condicion_texto = ""
-    params = {"id_proveedor": id_proveedor}
+    params = {"id_emp": id_emp, "id_proveedor": id_proveedor}
     if texto:
         condicion_texto = "AND (CAST(nro_docum AS TEXT) ILIKE :texto OR remito ILIKE :texto)"
         params["texto"] = f"%{texto}%"
@@ -70,7 +70,7 @@ def get_compras_origen_by_proveedor(db: Session, id_proveedor: int, texto: str =
         text(f"""
             SELECT id_trans, nro_docum, remito, fec_doc, imp_total
             FROM t_compras
-            WHERE id_proveedor = :id_proveedor AND status = 'F'
+            WHERE id_emp = :id_emp AND id_proveedor = :id_proveedor AND status = 'F'
             {condicion_texto}
             ORDER BY fec_doc DESC
             LIMIT 20
@@ -84,7 +84,7 @@ def get_compras_origen_by_proveedor(db: Session, id_proveedor: int, texto: str =
 # misma compra origen (para que una compra pueda tener varias devoluciones sin
 # permitir devolver de nuevo lo que ya se devolvio). excluir_id_trans se usa al
 # editar una devolucion existente, para no restarse a si misma de ese acumulado.
-def get_lineas_disponibles(db: Session, id_compra_origen: int, excluir_id_trans: int = None):
+def get_lineas_disponibles(db: Session, id_emp: int, id_compra_origen: int, excluir_id_trans: int = None):
     return db.execute(
         text("""
             SELECT
@@ -110,7 +110,7 @@ def get_lineas_disponibles(db: Session, id_compra_origen: int, excluir_id_trans:
             LEFT JOIN s_stkbodegas S ON S.id_bodega = A.id_bodega AND S.id_estado = A.id_estado
                 AND S.id_articulo = B.id_articulo AND S.id_codbarra = B.id_codbarra
             LEFT JOIN s_stkbodegaxlote L ON L.id_bodega = A.id_bodega AND L.id_estado = A.id_estado
-                AND L.id_articulo = B.id_articulo AND L.id_lote = B.id_lote
+                AND L.id_articulo = B.id_articulo AND L.id_codbarra = B.id_codbarra AND L.id_lote = B.id_lote
             LEFT JOIN (
                 SELECT TD.id_articulo, TD.id_codbarra, TD.id_lote, SUM(TD.cantidad) AS ya_devuelta
                 FROM td_devolucioncompras TD
@@ -119,10 +119,10 @@ def get_lineas_disponibles(db: Session, id_compra_origen: int, excluir_id_trans:
                     AND (:excluir_id_trans IS NULL OR TD.id_trans != :excluir_id_trans)
                 GROUP BY TD.id_articulo, TD.id_codbarra, TD.id_lote
             ) DEV ON DEV.id_articulo = B.id_articulo AND DEV.id_codbarra = B.id_codbarra AND DEV.id_lote = B.id_lote
-            WHERE B.id_trans = :id_compra_origen
+            WHERE B.id_trans = :id_compra_origen AND A.id_emp = :id_emp
             ORDER BY B.linea
         """),
-        {"id_compra_origen": id_compra_origen, "excluir_id_trans": excluir_id_trans}
+        {"id_emp": id_emp, "id_compra_origen": id_compra_origen, "excluir_id_trans": excluir_id_trans}
     ).mappings().all()
 
 # Obtener una devolucion por ID
@@ -199,9 +199,10 @@ def create_devolucion(db: Session, obj: schema_devolucion.DevolucionCompraCreate
         db.flush()
 
         # Impacta p_stock/p_costos de inmediato (no hay Borrador/Finalizado aqui).
+        usuario_mod = logs_dict[-1].get('usuario_mod') if logs_dict else None
         db.execute(
-            text("CALL public.sp_compras_devoluciones(:operacion, :parm_trans)"),
-            {"operacion": "N", "parm_trans": bd_devolucion.id_trans}
+            text("CALL public.sp_compras_devoluciones(:operacion, :parm_trans, :usuario)"),
+            {"operacion": "N", "parm_trans": bd_devolucion.id_trans, "usuario": usuario_mod}
         )
 
         db.commit()
@@ -241,9 +242,10 @@ def update_devolucion(db: Session, id_trans: int, obj: schema_devolucion.Devoluc
 
         # Vuelve a llamar al SP: borra e inserta de nuevo el impacto en p_stock/p_costos
         # a partir de la cabecera/detalle ya actualizados.
+        usuario_mod = bd_devolucion.logs[-1].get('usuario_mod') if bd_devolucion.logs else None
         db.execute(
-            text("CALL public.sp_compras_devoluciones(:operacion, :parm_trans)"),
-            {"operacion": "E", "parm_trans": id_trans}
+            text("CALL public.sp_compras_devoluciones(:operacion, :parm_trans, :usuario)"),
+            {"operacion": "E", "parm_trans": id_trans, "usuario": usuario_mod}
         )
 
         db.commit()

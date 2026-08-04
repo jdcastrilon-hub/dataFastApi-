@@ -9,6 +9,11 @@ class Empresa(Base):
 
     # Definición de columnas basadas en tu script SQL
     id_emp = Column(Integer, primary_key=True, autoincrement=True)
+    # Servidor de base de datos donde viven los datos de negocio de esta
+    # empresa. Hoy todas apuntan al único servidor existente (1) - preparación
+    # para cuando se divida en varios servidores (sharding), sin que eso
+    # implique ningún cambio de comportamiento todavía.
+    id_shard = Column(Integer, nullable=False, server_default="1", default=1)
     nom_emp = Column(String(50), nullable=False)
     razon_social = Column(String(50), nullable=False)
     cod_doc = Column(String(5), nullable=False)
@@ -17,7 +22,11 @@ class Empresa(Base):
     cod_ciudad = Column(Integer, nullable=False)
     telefono = Column(String(15), nullable=False)
     correo = Column(String(50), nullable=False)
-    
+
+    # Bloqueo comercial de la empresa completa (ej. mora) - no editable desde
+    # el CRUD estandar de empresas, ver docs/tecnica/specs/core/creacion-empresa.md
+    activa = Column(Boolean, nullable=False, server_default="true", default=True)
+
     # Campo para almacenar la lista de objetos JSON (logs)
     logs = Column(JSON, nullable=True)
     

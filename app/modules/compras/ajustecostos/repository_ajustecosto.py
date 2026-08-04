@@ -25,10 +25,14 @@ def create_ajuste(db: Session, obj: schema_ajustecosto.AjusteBase):
         db.add(bd_ajuste)
         db.flush() 
 
+        # El SP no recibe el usuario de un contexto de sesion (Python solo lo llama con
+        # operacion/parm_trans): se toma del ultimo log, igual que get_historial_ajustes()
+        # ya hace para mostrar "quien" hizo el ajuste directo.
+        usuario_mod = logs_dict[-1].get('usuario_mod') if logs_dict else None
         db.execute(
-                text("CALL public.sp_ajustecostos(:operacion,:parm_trans)"), 
-                {"operacion": "N", "parm_trans": bd_ajuste.id_trans}
-            )   
+                text("CALL public.sp_ajustecostos(:operacion,:parm_trans,:usuario)"),
+                {"operacion": "N", "parm_trans": bd_ajuste.id_trans, "usuario": usuario_mod}
+            )
 
         db.commit()
         db.refresh(bd_ajuste)

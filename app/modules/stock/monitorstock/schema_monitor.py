@@ -4,6 +4,7 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, Field
 from typing import List, Any, Optional
 from app.modules.stock.bodegas import schema_bodega
+from app.modules.stock.estados.schema_estado import EstadoCombo
 
 
 # Modelo principal de respuesta del Monitor
@@ -152,10 +153,11 @@ class LoteVencimiento(BaseModel):
 
 #Filtros
 class filtrosgeneralesxempresa(BaseModel):
-    idEmpresa: int 
+    idEmpresa: int
     listnegocio :  List[NegogocioSchema] = []
     listsucursales :  List[SucursalSchema] = []
     listCategorias: List[CategoriaSchema] = []
+    listestados: List[EstadoCombo] = []
     model_config = ConfigDict(
         from_attributes=True,  
         populate_by_name=True

@@ -12,9 +12,11 @@ def _limitar_logs(logs):
         return logs
     return logs[-MAX_LOGS_AUDITORIA:]
 
-# Obtener todas las bodegas ordenadas de mayor a menor
-def get_unidades(db: Session):
-    return db.query(model_unidad.Unidad).all()
+# Obtener todas las unidades de la empresa
+def get_unidades(db: Session, id_emp: int):
+    return db.query(model_unidad.Unidad)\
+        .filter(model_unidad.Unidad.id_emp == id_emp)\
+        .all()
 
 # Obtener una unidad por ID
 def get_unidad(db: Session, unidad_id: int):
@@ -53,8 +55,9 @@ def delete_unidad(db: Session, unidad_id: int):
     return db_unidad
 
 #Paginacion
-def get_unidades_paginated(db: Session, page: int, size: int, texto: str = None):
-    query = db.query(model_unidad.Unidad)
+def get_unidades_paginated(db: Session, page: int, size: int, id_emp: int, texto: str = None):
+    query = db.query(model_unidad.Unidad)\
+        .filter(model_unidad.Unidad.id_emp == id_emp)
 
     # Filtro de busqueda por codigo o nombre (si el usuario escribio algo)
     if texto:

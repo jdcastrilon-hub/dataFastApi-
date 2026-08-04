@@ -71,9 +71,9 @@ def list_sucursales(page: int = 0, size: int = 100, db: Session = Depends(get_db
     return repository_sucursal.get_sucursales(db, page, size)
 
 @router.get("/combo", response_model=List[schema_sucursal.SucursalListCombo])
-def list_sucursales(page: int = 0, size: int = 100, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
+def list_sucursales(page: int = 0, size: int = 100, db: Session = Depends(get_db),  contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)):
     print("page")
-    return repository_sucursal.get_sucursales(db, page, size)
+    return repository_sucursal.get_sucursales(db, contexto.id_emp)
 
 @router.get("/comboBybodegas", response_model=List[schema_sucursal.SucursalListComboByBodegas])
 def list_sucursales_With_Bodegas(id_empresa: int ,db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):

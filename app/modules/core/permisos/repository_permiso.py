@@ -1,3 +1,4 @@
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from . import model_permiso
 from app.modules.core.menus.model_menu import Menu
@@ -88,6 +89,11 @@ def get_matriz(db: Session, id_rol: int, id_modulo: int):
 # frontend (se trae una sola vez por sesion/empresa y se cachea en el cliente,
 # en vez de consultar al backend en cada navegacion).
 def get_mis_permisos(db: Session, id_usuario: int, id_emp: int) -> dict[str, list[str]]:
+    # Se calcula una sola vez y se aplica a ambos branches (superadmin
+    # incluido) - un modulo deshabilitado para la empresa no debe aparecer
+    # ni siquiera para su propio superadmin.
+    ids_modulo_deshabilitados = _ids_modulo_deshabilitados(db, id_emp)
+
     if usuario_es_superadmin(db, id_usuario, id_emp):
         # Acceso total: todas las acciones de todos los formularios, incluidos
         # los que se agreguen en el futuro (no depende de md_rol_permiso).
@@ -95,6 +101,7 @@ def get_mis_permisos(db: Session, id_usuario: int, id_emp: int) -> dict[str, lis
             .select_from(model_permiso.MenuPermiso)\
             .join(Menu, Menu.id_menu == model_permiso.MenuPermiso.id_menu)\
             .join(model_permiso.Permiso, model_permiso.Permiso.id_permiso == model_permiso.MenuPermiso.id_permiso)\
+            .filter(Menu.id_modulo.notin_(ids_modulo_deshabilitados))\
             .all()
         resultado_total: dict[str, list[str]] = {}
         for codigo_menu, codigo_accion in filas:
@@ -117,7 +124,10 @@ def get_mis_permisos(db: Session, id_usuario: int, id_emp: int) -> dict[str, lis
         .join(model_permiso.MenuPermiso, model_permiso.MenuPermiso.id_menu_permiso == model_permiso.RolPermiso.id_menu_permiso)
         .join(Menu, Menu.id_menu == model_permiso.MenuPermiso.id_menu)
         .join(model_permiso.Permiso, model_permiso.Permiso.id_permiso == model_permiso.MenuPermiso.id_permiso)
-        .filter(model_permiso.RolPermiso.id_rol.in_(ids_rol))
+        .filter(
+            model_permiso.RolPermiso.id_rol.in_(ids_rol),
+            Menu.id_modulo.notin_(ids_modulo_deshabilitados)
+        )
         .distinct()
         .all()
     )
@@ -127,6 +137,57 @@ def get_mis_permisos(db: Session, id_usuario: int, id_emp: int) -> dict[str, lis
         resultado.setdefault(codigo_menu, []).append(codigo_accion)
 
     return resultado
+
+
+# Habilitacion de modulos por empresa - ver
+# docs/tecnica/specs/core/delegacion-permisos-menu-exclusivo.md (Pieza 1).
+# Opt-out: sin fila para (id_emp, id_modulo), el modulo esta habilitado.
+def _ids_modulo_deshabilitados(db: Session, id_emp: int) -> set[int]:
+    return set(
+        row.id_modulo for row in
+        db.query(model_permiso.EmpresaXModulo.id_modulo)
+        .filter(
+            model_permiso.EmpresaXModulo.id_emp == id_emp,
+            model_permiso.EmpresaXModulo.activo == False
+        ).all()
+    )
+
+
+def modulo_habilitado_para_empresa(db: Session, id_emp: int, id_modulo: int) -> bool:
+    return id_modulo not in _ids_modulo_deshabilitados(db, id_emp)
+
+
+def get_modulos_empresa(db: Session, id_emp: int):
+    deshabilitados = _ids_modulo_deshabilitados(db, id_emp)
+    modulos = db.query(model_permiso.Modulo)\
+        .filter(model_permiso.Modulo.activo == True)\
+        .order_by(model_permiso.Modulo.orden).all()
+    return [
+        {
+            "id_modulo": m.id_modulo,
+            "nombre": m.nombre,
+            "activo": m.id_modulo not in deshabilitados
+        }
+        for m in modulos
+    ]
+
+
+def set_modulo_habilitado(db: Session, id_emp: int, id_modulo: int, activo: bool):
+    # Administracion nunca se puede deshabilitar - una empresa que se apague
+    # ese modulo se quedaria sin forma de volver a prenderlo desde la UI.
+    modulo = db.query(model_permiso.Modulo).filter(model_permiso.Modulo.id_modulo == id_modulo).first()
+    if modulo and modulo.codigo == "ADM":
+        raise HTTPException(status_code=400, detail="El modulo de Administracion no se puede deshabilitar")
+
+    fila = db.query(model_permiso.EmpresaXModulo).filter(
+        model_permiso.EmpresaXModulo.id_emp == id_emp,
+        model_permiso.EmpresaXModulo.id_modulo == id_modulo
+    ).first()
+    if fila:
+        fila.activo = activo
+    else:
+        db.add(model_permiso.EmpresaXModulo(id_emp=id_emp, id_modulo=id_modulo, activo=activo))
+    db.commit()
 
 
 def guardar_matriz(db: Session, id_rol: int, id_modulo: int, otorgados: list[int]):

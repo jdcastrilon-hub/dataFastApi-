@@ -10,6 +10,7 @@ class LogEntry(BaseModel):
 
 # Esquema Molde
 class UnidadBase(BaseModel):
+    id_emp: int = Field(alias="idEmp")
     cod_unidad: str = Field(alias="codUnidad", max_length=10)
     nom_unidad: str = Field(alias="nomUnidad", max_length=50)
     es_paquete: str = Field(alias="esPaquete", max_length=2)

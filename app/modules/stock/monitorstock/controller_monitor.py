@@ -14,9 +14,9 @@ router = APIRouter(
     tags=["Bodega - Monitor"])
 
 @router.get("/filtrovista1", response_model=schema_monitor.filtrosgeneralesxempresa)
-def filtrosvista1(id_empresa: int,db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
+def filtrosvista1(db: Session = Depends(get_db), contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)):
 
-    data = repository_monitor.get_filtros_vista_inventario(db,id_empresa)
+    data = repository_monitor.get_filtros_vista_inventario(db, contexto.id_emp)
     
     if not data:
         # Devolver lista vacia , si no hay data
@@ -28,19 +28,18 @@ def filtrosvista1(id_empresa: int,db: Session = Depends(get_db), usuario_autenti
 @router.get("/inventario", response_model=schema_monitor.MonitorInventario)
 def get_monitorcomprasrealizadas_data(
    # tipo_reporte: str,
-    id_emp: int,
     bodega: int,
     negocio : int,
     categoria: int,
     subcategoria : int,
+    estado: int = 0,
     articulos: List[int] = Query([]),
     page: int = Query(0, ge=0),
     size: int = Query(10, ge=1),
     db: Session = Depends(get_db),
-    usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)
+    contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)
 ):
-    print ("get_monitorcomprasrealizadas_data")
-    return repository_monitor.get_monitorinventario_data(db, id_emp, bodega, negocio,categoria,subcategoria,page,size,articulos)
+    return repository_monitor.get_monitorinventario_data(db, contexto.id_emp, bodega, negocio,categoria,subcategoria,page,size,articulos,estado)
 
 
 @router.get("/kardex", response_model=List[schema_monitor.MovimientoStock])
@@ -57,16 +56,16 @@ def get_kardex(
 
 @router.get("/inventario/export")
 def exportar_inventario(
-    id_emp: int,
     bodega: int,
     negocio: int,
     categoria: int,
     subcategoria: int,
+    estado: int = 0,
     articulos: List[int] = Query([]),
     db: Session = Depends(get_db),
-    usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)
+    contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)
 ):
-    filas = repository_monitor.get_inventario_export_data(db, id_emp, bodega, negocio, categoria, subcategoria, articulos)
+    filas = repository_monitor.get_inventario_export_data(db, contexto.id_emp, bodega, negocio, categoria, subcategoria, articulos, estado)
     buffer = repository_monitor.generar_excel_inventario(filas)
     return Response(
         content=buffer.getvalue(),
@@ -77,7 +76,6 @@ def exportar_inventario(
 
 @router.get("/valoracion", response_model=schema_monitor.MonitorValoracion)
 def get_valoracion(
-    id_emp: int,
     bodega: int,
     negocio: int,
     categoria: int,
@@ -86,23 +84,22 @@ def get_valoracion(
     page: int = Query(0, ge=0),
     size: int = Query(10, ge=1),
     db: Session = Depends(get_db),
-    usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)
+    contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)
 ):
-    return repository_monitor.get_valoracion_data(db, id_emp, bodega, negocio, categoria, subcategoria, page, size, articulos)
+    return repository_monitor.get_valoracion_data(db, contexto.id_emp, bodega, negocio, categoria, subcategoria, page, size, articulos)
 
 
 @router.get("/valoracion/export")
 def exportar_valoracion(
-    id_emp: int,
     bodega: int,
     negocio: int,
     categoria: int,
     subcategoria: int,
     articulos: List[int] = Query([]),
     db: Session = Depends(get_db),
-    usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)
+    contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)
 ):
-    filas = repository_monitor.get_valoracion_export_data(db, id_emp, bodega, negocio, categoria, subcategoria, articulos)
+    filas = repository_monitor.get_valoracion_export_data(db, contexto.id_emp, bodega, negocio, categoria, subcategoria, articulos)
     buffer = repository_monitor.generar_excel_valoracion(filas)
     return Response(
         content=buffer.getvalue(),
@@ -113,7 +110,6 @@ def exportar_valoracion(
 
 @router.get("/stockminimo", response_model=schema_monitor.MonitorStockMinimo)
 def get_stockminimo(
-    id_emp: int,
     bodega: int,
     negocio: int,
     categoria: int,
@@ -122,23 +118,22 @@ def get_stockminimo(
     page: int = Query(0, ge=0),
     size: int = Query(10, ge=1),
     db: Session = Depends(get_db),
-    usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)
+    contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)
 ):
-    return repository_monitor.get_stockminimo_data(db, id_emp, bodega, negocio, categoria, subcategoria, page, size, articulos)
+    return repository_monitor.get_stockminimo_data(db, contexto.id_emp, bodega, negocio, categoria, subcategoria, page, size, articulos)
 
 
 @router.get("/stockminimo/export")
 def exportar_stockminimo(
-    id_emp: int,
     bodega: int,
     negocio: int,
     categoria: int,
     subcategoria: int,
     articulos: List[int] = Query([]),
     db: Session = Depends(get_db),
-    usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)
+    contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)
 ):
-    filas = repository_monitor.get_stockminimo_export_data(db, id_emp, bodega, negocio, categoria, subcategoria, articulos)
+    filas = repository_monitor.get_stockminimo_export_data(db, contexto.id_emp, bodega, negocio, categoria, subcategoria, articulos)
     buffer = repository_monitor.generar_excel_stockminimo(filas)
     return Response(
         content=buffer.getvalue(),
@@ -149,7 +144,6 @@ def exportar_stockminimo(
 
 @router.get("/vencimientos", response_model=schema_monitor.MonitorVencimientos)
 def get_vencimientos(
-    id_emp: int,
     bodega: int,
     negocio: int,
     categoria: int,
@@ -158,23 +152,22 @@ def get_vencimientos(
     page: int = Query(0, ge=0),
     size: int = Query(10, ge=1),
     db: Session = Depends(get_db),
-    usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)
+    contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)
 ):
-    return repository_monitor.get_vencimientos_data(db, id_emp, bodega, negocio, categoria, subcategoria, page, size, articulos)
+    return repository_monitor.get_vencimientos_data(db, contexto.id_emp, bodega, negocio, categoria, subcategoria, page, size, articulos)
 
 
 @router.get("/vencimientos/export")
 def exportar_vencimientos(
-    id_emp: int,
     bodega: int,
     negocio: int,
     categoria: int,
     subcategoria: int,
     articulos: List[int] = Query([]),
     db: Session = Depends(get_db),
-    usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)
+    contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)
 ):
-    filas = repository_monitor.get_vencimientos_export_data(db, id_emp, bodega, negocio, categoria, subcategoria, articulos)
+    filas = repository_monitor.get_vencimientos_export_data(db, contexto.id_emp, bodega, negocio, categoria, subcategoria, articulos)
     buffer = repository_monitor.generar_excel_vencimientos(filas)
     return Response(
         content=buffer.getvalue(),

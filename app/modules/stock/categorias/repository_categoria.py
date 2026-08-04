@@ -12,11 +12,6 @@ def _limitar_logs(logs):
     return logs[-MAX_LOGS_AUDITORIA:]
 
 
-def get_categorias(db: Session, skip: int = 0, limit: int = 100):
-    # .options(joinedload(...)) se puede usar para optimizar, 
-    # pero al tener relationship configurado, SQLAlchemy lo manejará.
-    return db.query(models.Categoria).offset(skip).limit(limit).all()
-
 # Obtener una bodega por ID
 def get_categoriaByID(db: Session, categoria_id: int):
     return db.query(models.Categoria)\
@@ -143,8 +138,8 @@ def delete_categoria(db: Session, id_categoria: int):
         raise
 
 #Paginacion
-def get_bodegas_paginated(db: Session, page: int, size: int, texto: str = None):
-    query = db.query(models.Categoria)
+def get_categorias_paginated(db: Session, page: int, size: int, id_emp: int, texto: str = None):
+    query = db.query(models.Categoria).filter(models.Categoria.id_emp == id_emp)
 
     # Filtro de busqueda por codigo o nombre (si el usuario escribio algo)
     if texto:

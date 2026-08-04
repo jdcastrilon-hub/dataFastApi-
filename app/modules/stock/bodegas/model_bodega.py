@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, JSON, DateTime, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Boolean, JSON, DateTime, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from app.database import Base
 from sqlalchemy.sql import func
@@ -13,7 +13,7 @@ class Bodega(Base):
     nom_bodega = Column(String(80), nullable=False)
     principal = Column(String(2), nullable=False)
     tiene_ubicaciones = Column(String(2), nullable=False)
-    activo = Column(String(2), nullable=False)
+    activo = Column(Boolean, nullable=False)
     logs = Column(JSON, nullable=True)
     fecha_mod = Column(DateTime, onupdate=func.now(), nullable=True)
 

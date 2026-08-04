@@ -1,14 +1,17 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, JSON
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, JSON, UniqueConstraint
 from sqlalchemy.orm import relationship
 from app.database import Base
 
 class Estado(Base):
     __tablename__ = "m_estados"
-    __table_args__ = {"schema": "public"}
+    __table_args__ = (
+        UniqueConstraint('id_emp', 'cod_estado', name='m_estados_unique'),
+        {"schema": "public"}
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     id_emp = Column(Integer, nullable=False)
-    cod_estado = Column(String(20), unique=True, nullable=False)
+    cod_estado = Column(String(20), nullable=False)
     nom_estado = Column(String(80), nullable=False)
     activo = Column(Boolean, nullable=False)
     obervacion = Column(String(250), nullable=False) # Mantengo el typo del SQL original

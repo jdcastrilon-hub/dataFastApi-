@@ -6,7 +6,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font
 from sqlalchemy import and_, desc, text
 from sqlalchemy.orm import Session, contains_eager , joinedload
-from app.modules.compras.compradirecta import models
+from app.modules.compras.compradirecta import models as compras_models
 from app.modules.core.negocios import model_negocios
 from app.modules.stock.categorias import models
 from app.modules.core.sucursales import model_sucursal
@@ -123,6 +123,13 @@ def generar_excel_comprasrealizadas(filas) -> BytesIO:
     wb.save(buffer)
     buffer.seek(0)
     return buffer
+
+# Confirma que la compra es de la empresa activa antes de mostrar su detalle o sus
+# devoluciones (monitorcompras_detalle/monitorcompras_devoluciones no filtran por
+# empresa, cualquier id_trans traeria datos de cualquier compania).
+def compra_pertenece_a_empresa(db: Session, id_trans: int, id_emp: int) -> bool:
+    compra = db.query(compras_models.Compra.id_emp).filter(compras_models.Compra.id_trans == id_trans).first()
+    return compra is not None and compra.id_emp == id_emp
 
 def get_detalle_compra(db: Session, id_trans: int):
     result = db.execute(

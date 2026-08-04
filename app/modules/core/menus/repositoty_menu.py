@@ -1,9 +1,11 @@
+from fastapi import HTTPException
 from sqlalchemy import desc
 from sqlalchemy.orm import Session, joinedload
 from . import model_menu, schema_menu
 from app.modules.core.roles.model_rol import Rol, RolXUsuario
 from app.modules.core.roles.repository_rol import usuario_es_superadmin
 from app.modules.core.permisos.model_permiso import RolPermiso, MenuPermiso, Permiso
+from app.modules.core.permisos.repository_permiso import _ids_modulo_deshabilitados
 
 
 # ids de md_menu que el usuario puede VER, segun los roles que tenga en la
@@ -39,6 +41,14 @@ def obtener_menu(db: Session, id_usuario: int, id_emp: int):
         .order_by(model_menu.Menu.orden)
         .all()
     )
+
+    # Modulos deshabilitados para la empresa activa quedan fuera del universo
+    # completo ANTES de mirar rol/superadmin - ni el propio superadmin de la
+    # empresa ve un modulo que su empresa tiene apagado (ver
+    # docs/tecnica/specs/core/delegacion-permisos-menu-exclusivo.md, Pieza 1).
+    ids_modulo_deshabilitados = _ids_modulo_deshabilitados(db, id_emp)
+    if ids_modulo_deshabilitados:
+        registros = [r for r in registros if r.id_modulo not in ids_modulo_deshabilitados]
 
     # Superadmin: acceso total, ni siquiera pasa por md_rol_permiso (incluye
     # formularios futuros sin necesidad de otorgarselos explicitamente).
@@ -96,3 +106,47 @@ def obtener_menu(db: Session, id_usuario: int, id_emp: int):
                 padre.children.append(menu)
 
     return arbol
+
+
+# Registra una hoja nueva en md_menu y sus acciones en md_menu_permisos, en una
+# sola transaccion (mismo trabajo que scripts/agregar_formulario_menu.py, ahora
+# vía API - endpoint protegido a nivel de plataforma, ver controller_menu.py).
+def agregar_formulario_menu(db: Session, obj: schema_menu.AgregarFormularioRequest):
+    acciones = [a.strip().upper() for a in obj.acciones if a.strip()]
+
+    encontrados = {
+        row.codigo: row.id_permiso
+        for row in db.query(Permiso).filter(Permiso.codigo.in_(acciones)).all()
+    }
+    faltantes = set(acciones) - set(encontrados.keys())
+    if faltantes:
+        raise HTTPException(status_code=400, detail=f"Codigos de accion desconocidos en md_permisos: {sorted(faltantes)}")
+
+    db_menu = model_menu.Menu(
+        id_modulo=obj.id_modulo,
+        codigo=obj.codigo,
+        nombre=obj.nombre,
+        ruta=obj.ruta,
+        icono=obj.icono,
+        id_padre=obj.id_padre,
+        orden=obj.orden,
+        visible=obj.visible,
+        activo=True,
+        es_contenedor=False
+    )
+    db.add(db_menu)
+    db.flush()
+
+    for id_permiso in encontrados.values():
+        db.add(MenuPermiso(id_menu=db_menu.id_menu, id_permiso=id_permiso))
+
+    db.commit()
+    db.refresh(db_menu)
+
+    return {
+        "id_menu": db_menu.id_menu,
+        "codigo": db_menu.codigo,
+        "nombre": db_menu.nombre,
+        "acciones": sorted(encontrados.keys()),
+        "visible": db_menu.visible
+    }

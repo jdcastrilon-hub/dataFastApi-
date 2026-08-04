@@ -19,8 +19,10 @@ class AjusteStock(Base):
     fecha_mod = Column(DateTime, nullable=False)
     logs = Column(JSON) 
 
-    # Relación con el detalle
-    detalles = relationship("DetalleAjusteStock", back_populates="cabecera")
+    # Relación con el detalle. cascade="all, delete-orphan": id_trans es parte de la
+    # llave primaria compuesta de td_ajustestock, asi que al borrar la cabecera
+    # SQLAlchemy debe borrar el detalle (no puede "desasociarlo" poniendo id_trans en NULL).
+    detalles = relationship("DetalleAjusteStock", back_populates="cabecera", cascade="all, delete-orphan")
     # relaciones
     bodega = relationship("Bodega", back_populates="ajustes")
     estado = relationship("Estado", back_populates="ajustes")

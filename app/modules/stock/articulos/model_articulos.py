@@ -12,6 +12,10 @@ class Articulo(Base):
     cod_articulo = Column(String(30), nullable=False)
     nom_articulo = Column(String(100), nullable=False)
     
+    # Empresa dueña del articulo (derivada de id_negocio.id_emp al crear/editar, no
+    # se selecciona ni se recibe del frontend, ver repository_articulos._obtener_id_emp_de_negocio)
+    id_emp = Column(Integer, ForeignKey("public.md_empresas.id_emp"), nullable=False)
+
     # Llaves foráneas (Relaciones)
     id_negocio = Column(Integer, ForeignKey("public.m_negocios.id"), nullable=False)
     id_categoria = Column(Integer, nullable=False) # Si no tienes m_categorias.id como FK formal, queda así

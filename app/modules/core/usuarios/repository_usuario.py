@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session, joinedload
 from . import model_usuario, esquema_usuario
 from app.modules.compras.personas import modelo_personas
 from app.modules.core.empresas.model_empresa import EmpresaXUser
+from app.modules.core.roles import model_rol
 from app.core.auth.security import obtener_password_hash
 
 # Máximo de entradas de auditoría que se conservan en el jsonb "logs".
@@ -186,4 +187,69 @@ def update_usuario(db: Session, usuario_id: int, obj: esquema_usuario.UsuarioCre
 
         db.commit()
         db.refresh(db_usuario)
+    return db_usuario
+
+
+# "Mi Perfil": el propio usuario logueado, con los roles que tiene en la empresa
+# activa. id_usuario sale siempre del JWT (usuario_autenticado), nunca de un
+# parametro del cliente - no es un CRUD administrativo, es autoservicio.
+def get_mi_perfil(db: Session, id_usuario: int, id_emp: int):
+    db_usuario = db.query(model_usuario.Usuario)\
+        .options(joinedload(model_usuario.Usuario.persona))\
+        .filter(model_usuario.Usuario.id_usuario == id_usuario)\
+        .first()
+    if not db_usuario:
+        return None
+
+    roles = db.query(model_rol.Rol)\
+        .join(model_rol.RolXUsuario, model_rol.RolXUsuario.id_rol == model_rol.Rol.id_rol)\
+        .filter(
+            model_rol.RolXUsuario.id_usuario == id_usuario,
+            model_rol.Rol.id_emp == id_emp,
+            model_rol.Rol.activo == True
+        ).all()
+
+    return {
+        "id_usuario": db_usuario.id_usuario,
+        "usuario": db_usuario.usuario,
+        "nom_usuario": db_usuario.nom_usuario,
+        "persona": db_usuario.persona,
+        "roles": roles,
+        "logs": db_usuario.logs or [],
+    }
+
+
+# Edita los datos propios (usuario/nomUsuario + su persona ligada). No toca
+# activo/clave/logs de rol - eso sigue siendo resorte de Administracion.
+def update_mi_perfil(db: Session, id_usuario: int, obj: esquema_usuario.MiPerfilUpdate):
+    db_usuario = db.query(model_usuario.Usuario).filter(model_usuario.Usuario.id_usuario == id_usuario).first()
+    if not db_usuario:
+        return None
+
+    logs_dict = _limitar_logs([log.model_dump() for log in obj.logs])
+
+    db_usuario.usuario = obj.usuario
+    db_usuario.nom_usuario = obj.nom_usuario
+    db_usuario.logs = logs_dict
+    db_usuario.fecha_mod = obj.fecha_mod
+
+    db.query(modelo_personas.Persona)\
+        .filter(modelo_personas.Persona.id_persona == db_usuario.id_persona)\
+        .update({
+            "id_tipodoc": obj.persona.id_tipodoc,
+            "cod_tit": obj.persona.cod_tit,
+            "nombres": obj.persona.nombres,
+            "apellidos": obj.persona.apellidos,
+            "nombre_completo": obj.persona.nombre_completo,
+            "sexo": obj.persona.sexo,
+            "fec_nacimiento": obj.persona.fec_nacimiento,
+            "direccion": obj.persona.direccion,
+            "telefono": obj.persona.telefono,
+            "mail": obj.persona.mail,
+            "id_ciudad": obj.persona.id_ciudad,
+            "fecha_mod": obj.fecha_mod
+        }, synchronize_session=False)
+
+    db.commit()
+    db.refresh(db_usuario)
     return db_usuario

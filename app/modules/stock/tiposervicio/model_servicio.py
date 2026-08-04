@@ -1,10 +1,13 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from app.database import Base
 
 class TipoServicio(Base):
     __tablename__ = "m_tiposervicio"
-    __table_args__ = {'schema': 'public'}
+    __table_args__ = (
+        UniqueConstraint('id_emp', 'cod_servicio', name='m_tiposervicio_id_emp_cod_servicio_key'),
+        {'schema': 'public'}
+    )
 
     # Campos basados en el DDL
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)

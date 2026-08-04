@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, UniqueConstraint
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql import func
 from app.database import Base
@@ -7,11 +7,12 @@ from sqlalchemy.orm import relationship
 class Unidad(Base):
     __tablename__ = "m_unidades"
     __table_args__ = (
-        UniqueConstraint('cod_unidad', name='m_unidades_pk_unica'),
+        UniqueConstraint('id_emp', 'cod_unidad', name='m_unidades_pk_unica'),
         {'schema': 'public'}
     )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    id_emp = Column(Integer, ForeignKey("public.md_empresas.id_emp"), nullable=False)
     cod_unidad = Column(String(10), nullable=False)
     nom_unidad = Column(String(50), nullable=False)
     es_paquete = Column(String(2), nullable=False) # 'SI' / 'NO'

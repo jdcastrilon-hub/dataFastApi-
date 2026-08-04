@@ -21,8 +21,10 @@ class TrasladoStock(Base):
     fecha_mod = Column(DateTime, nullable=False)
     logs = Column(JSON)
 
-    # Relación con el detalle
-    detalles = relationship("DetalleTrasladoStock", back_populates="cabecera")
+    # Relación con el detalle. cascade="all, delete-orphan": id_trans es parte de la
+    # llave primaria compuesta de td_trasladobodega, asi que al borrar la cabecera
+    # SQLAlchemy debe borrar el detalle (no puede "desasociarlo" poniendo id_trans en NULL).
+    detalles = relationship("DetalleTrasladoStock", back_populates="cabecera", cascade="all, delete-orphan")
     # relaciones
     bodega_origen = relationship("Bodega", foreign_keys=[id_bodega_origen], back_populates="traslados_origen")
     bodega_destino = relationship("Bodega", foreign_keys=[id_bodega_destino], back_populates="traslados_destino")

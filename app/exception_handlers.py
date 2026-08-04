@@ -3,12 +3,26 @@ import re
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-from sqlalchemy.exc import DataError, IntegrityError
+from sqlalchemy.exc import DataError, IntegrityError, InternalError
 
 from app.exceptions import TransaccionValidationError
 
-def add_exception_handlers(app, allowed_origins=None):
-    allowed_origins = allowed_origins or []
+# Centraliza la limpieza del mensaje 'ERR_VAL: ...' que usan los RAISE EXCEPTION
+# de los SPs/triggers de control de negocio (ver sp_general_control_stock y
+# cualquier trigger de limite de plan) - una sola vez para todo el ERP, sin
+# importar si llega envuelto en TransaccionValidationError (repository con
+# try/except propio, ej. ventas/compras) o crudo como InternalError (INSERT
+# normal sin try/except, ej. un trigger BEFORE INSERT en bodegas).
+def _limpiar_mensaje_err_val(mensaje_completo: str) -> str:
+    if "ERR_VAL:" not in mensaje_completo:
+        return "La transacción fue rechazada por controles internos."
+    try:
+        return re.search(r"ERR_VAL:\s*(.*?)(?=\n|$)", mensaje_completo).group(1)
+    except AttributeError:
+        return mensaje_completo.split("ERR_VAL:")[1].split("\n")[0].strip()
+
+def add_exception_handlers(app, allowed_origin_pattern=None):
+    origen_permitido_re = re.compile(allowed_origin_pattern) if allowed_origin_pattern else None
 
     def _cors_headers(request: Request) -> dict:
         # El handler de Exception corre en ServerErrorMiddleware, que en Starlette
@@ -18,7 +32,7 @@ def add_exception_handlers(app, allowed_origins=None):
         # agregarlos a mano, reflejando el mismo origen permitido que CORSMiddleware,
         # o el navegador descarta la respuesta como si fuera un fallo de CORS.
         origin = request.headers.get("origin")
-        if origin and origin in allowed_origins:
+        if origin and origen_permitido_re and origen_permitido_re.match(origin):
             return {
                 "Access-Control-Allow-Origin": origin,
                 "Access-Control-Allow-Credentials": "true",
@@ -55,6 +69,8 @@ def add_exception_handlers(app, allowed_origins=None):
     # Cualquier constraint no listada aquí sigue usando el mensaje genérico.
     MENSAJES_UNIQUE_VIOLATION = {
         "t_compras_unique": "Ya existe una compra registrada con ese número de remito para este proveedor.",
+        "ux_listaprecio_general_por_emp": "Ya existe una lista de precios general activa para esta empresa. Solo puede haber una.",
+        "ux_bodega_principal_por_sucursal": "Ya existe una bodega principal activa para esta sucursal. Desactive o quite el estado de principal a la actual antes de asignar otra.",
     }
 
     @app.exception_handler(IntegrityError)
@@ -154,22 +170,41 @@ def add_exception_handlers(app, allowed_origins=None):
 
     @app.exception_handler(TransaccionValidationError)
     async def validation_error_handler(request: Request, exc: TransaccionValidationError):
-        error_completo = exc.message
-        
-        # Centralizas la limpieza del mensaje aquí una sola vez para todo el ERP
-        if "ERR_VAL:" in error_completo:
-            try:
-                mensaje_pulido = re.search(r"ERR_VAL:\s*(.*?)(?=\n|$)", error_completo).group(1)
-            except AttributeError:
-                mensaje_pulido = error_completo.split("ERR_VAL:")[1].split("\n")[0].strip()
-        else:
-            mensaje_pulido = "La transacción fue rechazada por controles internos."
-            
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={
                 "status": "error",
-                "message": mensaje_pulido,
+                "message": _limpiar_mensaje_err_val(exc.message),
                 "data": None # Enviamos el detalle técnico para depurar en desarrollo
             }
+        )
+
+    # 4. RAISE EXCEPTION crudo de un trigger (sin pasar por un try/except propio del
+    # repository, ej. un BEFORE INSERT que valida un limite de plan). SQLAlchemy lo
+    # entrega como InternalError con pgcode P0001, no como IntegrityError/DataError.
+    # Solo se traduce a mensaje amigable si trae el prefijo 'ERR_VAL:' (control de
+    # negocio conocido) - cualquier otro InternalError sigue siendo un 500 real,
+    # no se lo tragamos en silencio.
+    @app.exception_handler(InternalError)
+    async def internal_error_handler(request: Request, exc: InternalError):
+        mensaje_original = str(getattr(exc, "orig", exc))
+
+        if "ERR_VAL:" in mensaje_original:
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={
+                    "status": "error",
+                    "message": _limpiar_mensaje_err_val(mensaje_original),
+                    "data": None
+                }
+            )
+
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "status": "error3",
+                "message": "Ha ocurrido un error inesperado en el servidor.",
+                "data": mensaje_original
+            },
+            headers=_cors_headers(request),
         )

@@ -37,6 +37,55 @@ class ListaNegocios(BaseModel):
     nom_negocio:  str = Field(alias="nomNegocio", max_length=20)
 
     model_config = ConfigDict(
-        from_attributes=True,  
+        from_attributes=True,
+        populate_by_name=True
+    )
+
+# Perfil de "Mi Empresa" (pantalla de un solo registro en Administracion) - solo
+# los campos editables por el cliente. id_shard/id_plan son de plataforma
+# (Nexor) y quedan deliberadamente fuera, ni siquiera de solo lectura.
+class EmpresaPerfilBase(BaseModel):
+    nom_emp: str = Field(alias="nomEmp", max_length=50)
+    razon_social: str = Field(alias="razonSocial", max_length=50)
+    cod_doc: str = Field(alias="codDoc", max_length=5)
+    nit: str = Field(alias="nit", max_length=20)
+    direccion: str = Field(alias="direccion", max_length=50)
+    cod_ciudad: int = Field(alias="codCiudad")
+    telefono: str = Field(alias="telefono", max_length=15)
+    correo: str = Field(alias="correo", max_length=50)
+    fecha_mod: Optional[datetime] = Field(None, alias="fechaMod")
+    logs: List[LogEntry] = Field(default=[])
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True
+    )
+
+class EmpresaPerfilUpdate(EmpresaPerfilBase):
+    pass
+
+class EmpresaPerfilResponse(EmpresaPerfilBase):
+    id_emp: int = Field(alias="idEmp")
+
+# Payload del endpoint de provisioning (POST /core/empresas/save), ver
+# docs/tecnica/specs/core/creacion-empresa.md. "usuario" es el username de un
+# administrador que YA debe existir (no se crea aqui). Los maestros base
+# (unidades, motivos de ajuste, estados, tipos de servicio) ya no se copian de
+# una empresa plantilla - los carga sp_core_nuevaempresa con valores fijos.
+class EmpresaCreate(BaseModel):
+    nom_emp: str = Field(alias="nomEmp", max_length=50)
+    razon_social: str = Field(alias="razonSocial", max_length=50)
+    cod_doc: str = Field(alias="codDoc", max_length=5)
+    nit: str = Field(alias="nit", max_length=20)
+    direccion: str = Field(alias="direccion", max_length=50)
+    cod_ciudad: int = Field(alias="codCiudad")
+    telefono: str = Field(alias="telefono", max_length=15)
+    correo: str = Field(alias="correo", max_length=50)
+    usuario: str = Field(alias="usuario", max_length=20)
+    fecha_mod: Optional[datetime] = Field(None, alias="fechaMod")
+    logs: List[LogEntry] = Field(default=[])
+
+    model_config = ConfigDict(
+        from_attributes=True,
         populate_by_name=True
     )
