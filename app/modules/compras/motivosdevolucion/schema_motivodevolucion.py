@@ -11,7 +11,7 @@ class LogEntry(BaseModel):
 # Esquema Molde
 class MotivoDevolucionBase(BaseModel):
     id_emp: int = Field(alias="idEmp")
-    cod_motivo: str = Field(alias="codMotivo", max_length=10)
+    cod_motivo: Optional[str] = Field(alias="codMotivo", max_length=10, default=None)
     nom_motivo: str = Field(alias="nomMotivo", max_length=80)
     activo: str = Field(alias="activo", max_length=2)
     fecha_mod: Optional[datetime] = Field(alias="fechaMod", default=None)

@@ -11,7 +11,7 @@ class LogEntry(BaseModel):
 # Esquema Molde
 class EstadoBase(BaseModel):
     id_emp: int = Field(alias="idEmpresa")
-    cod_estado: str = Field(alias="codEstado", max_length=20)
+    cod_estado: Optional[str] = Field(alias="codEstado", max_length=20, default=None)
     nom_estado: str = Field(alias="nomEstado", max_length=80)
     activo: bool = Field(alias="activo")
     obervacion: str = Field(alias="observacion", max_length=250)

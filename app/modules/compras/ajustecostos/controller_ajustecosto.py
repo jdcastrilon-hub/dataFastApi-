@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, status,Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from typing import List
 from app.database import get_db
 from . import repository_ajustecosto ,schema_ajustecosto
 from app.modules.core.usuarios import model_usuario
@@ -20,13 +19,3 @@ def save(ajuste: schema_ajustecosto.AjusteBase, db: Session = Depends(get_db), u
             "message": "Ajuste creado exitosamente",
             "data": None  # Omites el objeto completo para ahorrar recursos
     }
-
-
-@router.get("/historial", response_model=List[schema_ajustecosto.HistorialAjusteCosto])
-def historial(
-    id_articulo: int,
-    id_bodega: int,
-    db: Session = Depends(get_db),
-    usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)
-):
-    return repository_ajustecosto.get_historial_ajustes(db, id_articulo, id_bodega)

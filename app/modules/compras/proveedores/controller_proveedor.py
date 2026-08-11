@@ -4,6 +4,10 @@ from typing import List
 from app.database import get_db
 from . import repository_proveedor, schema_proveedor
 from app.core.auth import security
+from app.core.auth.permisos import verificar_permiso
+
+# Codigo del formulario en md_menu (matriz de permisos)
+MENU_CODIGO = "COM_PRO"
 
 router = APIRouter(
     prefix="/compras/proveedor",
@@ -40,6 +44,7 @@ def create_proveedor(db_proveedor: schema_proveedor.ProveedorCreate, db: Session
     (ej. codigoTitular duplicado) los resuelve el manejador global de IntegrityError
     con un mensaje amigable, en una sola llamada (sin endpoint de validación previa)."""
     db_proveedor.id_emp = contexto.id_emp  # ignora el id_emp que mande el cliente en el body
+    verificar_permiso(db, contexto.usuario.id_usuario, contexto.id_emp, MENU_CODIGO, "CREAR")
     repository_proveedor.create_proveedor(db=db, obj=db_proveedor)
     return {
         "status": "success",
@@ -56,6 +61,7 @@ def actualizar_proveedor(proveedor_id: int, db_proveedor: schema_proveedor.Prove
     if db_actual.id_emp != contexto.id_emp:
         # No es de la empresa activa de la sesión: se trata como si no existiera
         raise HTTPException(status_code=404, detail="Proveedor no encontrado")
+    verificar_permiso(db, contexto.usuario.id_usuario, contexto.id_emp, MENU_CODIGO, "EDITAR")
 
     db_proveedor.id_emp = contexto.id_emp  # ignora el id_emp que mande el cliente en el body
     repository_proveedor.update_proveedor(db, proveedor_id=proveedor_id, obj=db_proveedor)
@@ -73,6 +79,7 @@ def eliminar_proveedor(proveedor_id: int, db: Session = Depends(get_db), context
         raise HTTPException(status_code=404, detail="Proveedor no encontrado")
     if db_actual.id_emp != contexto.id_emp:
         raise HTTPException(status_code=404, detail="Proveedor no encontrado")
+    verificar_permiso(db, contexto.usuario.id_usuario, contexto.id_emp, MENU_CODIGO, "ELIMINAR")
 
     repository_proveedor.delete_proveedor(db, proveedor_id=proveedor_id)
     return None

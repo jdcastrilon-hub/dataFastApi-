@@ -8,7 +8,8 @@ class Bodega(Base):
     __table_args__ = {"schema": "public"}
 
     id = Column(Integer, primary_key=True, index=True)
-    id_sucursal = Column(Integer,ForeignKey("public.m_sucursales.id"),  nullable=False) 
+    id_emp = Column(Integer, ForeignKey("public.md_empresas.id_emp"), nullable=False)
+    id_sucursal = Column(Integer,ForeignKey("public.m_sucursales.id"),  nullable=False)
     cod_bodega = Column(String(20), nullable=False)
     nom_bodega = Column(String(80), nullable=False)
     principal = Column(String(2), nullable=False)
@@ -40,7 +41,7 @@ class Bodega(Base):
         foreign_keys="TrasladoStock.id_bodega_destino"
     )
 
-    # Definimos la restricción UNIQUE que tienes en el SQL
+    # Codigo unico por empresa (no por sucursal), ver migracion ba7abfa79763
     __table_args__ = (
-        UniqueConstraint('id_sucursal', 'cod_bodega', name='m_bodegas_unique'),
+        UniqueConstraint('id_emp', 'cod_bodega', name='m_bodegas_unique'),
     )

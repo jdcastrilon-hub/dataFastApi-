@@ -105,6 +105,7 @@ def create_venta(db: Session, obj: schema_ventas.ventaCreate, nro_docum : int) :
             serie_remito="", 
             id_turno=obj.id_turno,
             id_caja=obj.id_caja,
+            id_lista=obj.id_lista,
 
             observacion = obj.observacion,
             imp_ingreso = obj.imp_ingreso,
@@ -186,6 +187,7 @@ def update_venta(db: Session, id_trans: int, id_emp: int, obj: schema_ventas.ven
         bd_venta.fec_doc = obj.fec_doc
         bd_venta.id_turno = obj.id_turno
         bd_venta.id_caja = obj.id_caja
+        bd_venta.id_lista = obj.id_lista
         bd_venta.observacion = obj.observacion
         bd_venta.imp_ingreso = obj.imp_ingreso
         bd_venta.imp_vuelto = obj.imp_vuelto
@@ -293,3 +295,38 @@ def _procesar_detalles_pago(db: Session, id_trans: int, id_emp: str, obj: schema
             id_mediopago=det.id_mediopago,
             importe=det.importe
         ))
+
+
+def consultar_stock_precio_lote(db: Session, cadena: str, id_bodega: int, id_estado: int, id_lista: int):
+    """Llama a ventas_obtener_stock_precio_masivo (mismo patron que
+    compradirecta.consultar_stock_lote) para recalcular stock y precio de varios
+    articulos en una sola consulta, usado cuando el usuario cambia bodega/estado/
+    lista de precios con lineas ya cargadas en la grilla."""
+    try:
+        query = text("""
+            SELECT idarticulo, idcodbarra, stock, precio, idimpuesto, porcentaje
+            FROM public.ventas_obtener_stock_precio_masivo(:cadena, :bodega, :estado, :lista)
+        """)
+
+        result = db.execute(query, {
+            "cadena": cadena,
+            "bodega": id_bodega,
+            "estado": id_estado,
+            "lista": id_lista
+        })
+
+        return [
+            {
+                "idarticulo": row.idarticulo,
+                "idcodbarra": row.idcodbarra,
+                "stock": row.stock,
+                "precio": float(row.precio),
+                "idimpuesto": row.idimpuesto,
+                "porcentaje": float(row.porcentaje)
+            }
+            for row in result
+        ]
+
+    except Exception as e:
+        print(f"Error en consultar_stock_precio_lote: {str(e)}")
+        return []

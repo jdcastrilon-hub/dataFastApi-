@@ -115,3 +115,16 @@ def exportar_costos(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": 'attachment; filename="costos.xlsx"'}
     )
+
+
+@router.get("/costos/kardex", response_model=List[schema_monitor.CostoKardexLinea])
+def get_costo_kardex(
+    id_articulo: int,
+    id_bodega: int,
+    db: Session = Depends(get_db),
+    contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)
+):
+    """Kardex de costos: lee s_costovariacion, ya pre-filtrada a solo cambios
+    reales (compras, ajustes directos, cargastock) - sin filtro de fechas,
+    la tabla origen es chica por construccion."""
+    return repository_monitor.get_costo_kardex(db, contexto.id_emp, id_articulo, id_bodega)

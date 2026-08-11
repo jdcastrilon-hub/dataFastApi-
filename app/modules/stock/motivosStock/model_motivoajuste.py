@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, JSON, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, JSON, ForeignKey, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 import datetime
 from sqlalchemy.orm import relationship
@@ -16,7 +16,7 @@ class MotivoAjuste(Base):
     cod_motivo = Column(String(10), nullable=False)
     nom_motivo = Column(String(80), nullable=False)
     signo = Column(Integer, nullable=False)
-    activo = Column(String(2), nullable=False)
+    activo = Column(Boolean, nullable=False)
     cta_inventario = Column(String(15), nullable=False)
     fecha_mod = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
     logs = Column(JSON, nullable=True)

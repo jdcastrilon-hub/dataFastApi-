@@ -2,14 +2,31 @@ from fastapi import HTTPException
 from sqlalchemy import desc, or_, text
 from sqlalchemy.orm import Session , joinedload
 from . import models, schema_categoria
+from app.core.numeradores import repository_numerador
 
 # Máximo de entradas de auditoría que se conservan en el jsonb "logs".
 MAX_LOGS_AUDITORIA = 10
+
+# Codigo del numerador (por empresa) que identifica el consecutivo de cod_categoria
+CODIGO_NUMERADOR_CATEGORIA = "CATEGORIA"
 
 def _limitar_logs(logs):
     if not logs:
         return logs
     return logs[-MAX_LOGS_AUDITORIA:]
+
+def _obtener_cod_categoria(db: Session, id_emp: int, cod_categoria_manual):
+    """
+    Asigna el codCategoria desde el numerador de la empresa (2 digitos, ver
+    docs/tecnica/specs/core/autonumeracion-catalogos.md). Si la empresa tiene
+    "requiere_consecutivo" en False, respeta lo que haya enviado el formulario
+    (modo manual) - mismo criterio que _obtener_cod_articulo/_obtener_cod_bodega.
+    """
+    siguiente = repository_numerador.siguiente_numerador(db, id_emp, CODIGO_NUMERADOR_CATEGORIA)
+    if siguiente is None:
+        return cod_categoria_manual
+
+    return repository_numerador.formatear_numerador(siguiente, longitud=2)
 
 
 # Obtener una bodega por ID
@@ -29,7 +46,7 @@ def create_categoria(db: Session, cat: schema_categoria.CategoriaCreate):
     # 1. Crear el objeto principal
     db_categoria = models.Categoria(
         id_emp=cat.id_emp,
-        cod_categoria=cat.cod_categoria,
+        cod_categoria=_obtener_cod_categoria(db, cat.id_emp, cat.cod_categoria),
         nom_categoria=cat.nom_categoria,
         estado=cat.estado,
         logs=logs_dict,

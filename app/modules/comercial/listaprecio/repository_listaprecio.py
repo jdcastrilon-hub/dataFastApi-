@@ -92,6 +92,42 @@ def delete_listaprecio(db: Session, id_lista: int):
     return db_lista
 
 
+# Combo de listas base (nunca de cliente) para usar como selector en otros
+# formularios (ej. venta-directa) - no tiene sentido ofrecer ahi una lista
+# negociada de un cliente puntual, esa se resuelve por otro camino.
+def get_listaprecio_combo(db: Session, id_emp: int, id_usuario: int):
+    # La general nunca valida permiso (acceso implicito para todos); una lista
+    # base no-general (ej. Mayorista) solo aparece si el usuario tiene una fila
+    # en m_listaprecioxuser para ella. Las de cliente nunca entran aca (filtro
+    # id_cliente IS NULL) - se tratan distinto (ver project_data_lista_precios_design).
+    return db.query(model_listaprecio.MListaPrecio)\
+        .filter(
+            model_listaprecio.MListaPrecio.id_emp == id_emp,
+            model_listaprecio.MListaPrecio.id_cliente.is_(None),
+            model_listaprecio.MListaPrecio.activo.is_(True),
+            or_(
+                model_listaprecio.MListaPrecio.es_general.is_(True),
+                model_listaprecio.MListaPrecio.usuarios.any(model_listaprecio.MListaPrecioXUser.id_usuario == id_usuario)
+            )
+        )\
+        .order_by(model_listaprecio.MListaPrecio.nombre)\
+        .all()
+
+
+# A diferencia de get_listaprecio_combo, incluye tambien las listas de cliente:
+# la carga masiva de precios puede apuntar a cualquier lista activa (ver diseño
+# en project_data_lista_precios_design).
+def get_listaprecio_combo_todas(db: Session, id_emp: int):
+    return db.query(model_listaprecio.MListaPrecio)\
+        .options(joinedload(model_listaprecio.MListaPrecio.cliente))\
+        .filter(
+            model_listaprecio.MListaPrecio.id_emp == id_emp,
+            model_listaprecio.MListaPrecio.activo.is_(True)
+        )\
+        .order_by(model_listaprecio.MListaPrecio.nombre)\
+        .all()
+
+
 def get_listaprecio_paginated(db: Session, page: int, size: int, id_emp: int, texto: str = None):
     query = db.query(model_listaprecio.MListaPrecio)\
         .options(joinedload(model_listaprecio.MListaPrecio.cliente))\

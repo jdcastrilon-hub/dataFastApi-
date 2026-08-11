@@ -33,7 +33,7 @@ class PaginatedBodegaResponse(BaseModel):
 class CategoriaBase(BaseModel):
     id: Optional[int] = Field(alias="id")
     id_emp: int = Field(alias="idEmpresa")
-    cod_categoria: str = Field(alias="codCategoria", max_length=15)
+    cod_categoria: Optional[str] = Field(alias="codCategoria", max_length=15, default=None)
     nom_categoria: str = Field(alias="nomCategoria", max_length=50)
     estado: bool = Field(alias="estado",default=False)
     fecha_mod: Optional[datetime] = Field(alias="fechaMod",default=None)

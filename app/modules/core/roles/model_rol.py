@@ -22,6 +22,13 @@ class Rol(Base):
     # empresa, nunca desde el formulario de Roles.
     es_superadmin = Column(Boolean, nullable=False, default=False)
 
+    # Rol "Admin" base que crea automaticamente el provisioning de empresa
+    # (junto al SUPERADMIN) - no se puede eliminar desde la pantalla de Roles
+    # (ver delete_rol). A diferencia de es_superadmin, este SI se expone en
+    # el schema de respuesta (el frontend necesita saberlo para esconder el
+    # boton eliminar), pero nunca se asigna desde el payload de create/update.
+    es_protegido = Column(Boolean, nullable=False, default=False)
+
     usuarios = relationship("RolXUsuario", back_populates="rol", cascade="all, delete-orphan")
 
 

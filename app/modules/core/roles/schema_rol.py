@@ -32,6 +32,10 @@ class RolBase(BaseModel):
     fecha_mod: Optional[datetime] = Field(None, alias="fechaMod")
     logs: List[LogEntry]
     usuarios: List[RolXUsuarioBase] = Field(default=[], alias="usuarios")
+    # Solo lectura: create_rol/update_rol nunca lo asignan desde este payload,
+    # aunque el campo exista aca (para que /search pueda devolverlo). Ver
+    # model_rol.py::Rol.es_protegido.
+    es_protegido: bool = Field(False, alias="esProtegido")
 
     model_config = ConfigDict(
         from_attributes=True,
@@ -47,6 +51,7 @@ class RolPaginacion(BaseModel):
     nombre: str = Field(alias="nombre", max_length=100)
     activo: bool = Field(alias="activo")
     fecha_mod: Optional[datetime] = Field(None, alias="fechaMod")
+    es_protegido: bool = Field(alias="esProtegido")
 
     model_config = ConfigDict(
         from_attributes=True,
@@ -58,3 +63,15 @@ class PaginatedRolResponse(BaseModel):
     totalPages: int
     number: int
     size: int
+
+# Combo liviano para el picker de rol dentro del formulario de Usuario -
+# excluye roles superadmin (mismo criterio que core/permisos::get_roles_combo:
+# asignar superadmin desde un picker generico seria autoescalamiento, esa
+# asignacion queda reservada a la propia pantalla de Roles).
+class RolListCombo(BaseModel):
+    id_rol: int = Field(alias="idRol")
+    nombre: str = Field(alias="nombre")
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True)

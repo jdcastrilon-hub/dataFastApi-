@@ -15,15 +15,16 @@ ya que leer no modifica nada.
 """
 
 def usuario_tiene_permiso(db: Session, id_usuario: int, id_emp: int, menu_codigo: str, accion: str) -> bool:
-    # El chequeo de modulo va ANTES del bypass de superadmin - un modulo
-    # deshabilitado para la empresa corta el acceso incluso para su propio
-    # superadmin (ver docs/tecnica/specs/core/delegacion-permisos-menu-exclusivo.md).
+    if usuario_es_superadmin(db, id_usuario, id_emp):
+        return True
+
+    # El chequeo de modulo aplica solo a roles no-superadmin: el unico que
+    # activa/desactiva modulos es el superadmin de la propia empresa, asi que
+    # nunca deberia quedar el mismo bloqueado por su propia decision (ver
+    # docs/tecnica/specs/core/delegacion-permisos-menu-exclusivo.md).
     menu = db.query(Menu).filter(Menu.codigo == menu_codigo).first()
     if menu and not modulo_habilitado_para_empresa(db, id_emp, menu.id_modulo):
         return False
-
-    if usuario_es_superadmin(db, id_usuario, id_emp):
-        return True
 
     return db.query(RolPermiso)\
         .join(RolXUsuario, RolXUsuario.id_rol == RolPermiso.id_rol)\

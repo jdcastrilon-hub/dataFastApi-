@@ -5,6 +5,10 @@ from app.database import get_db
 from . import repository_compras, schema_compras
 from app.modules.core.usuarios import model_usuario
 from app.core.auth import security
+from app.core.auth.permisos import verificar_permiso
+
+# Codigo del formulario en md_menu (matriz de permisos)
+MENU_CODIGO = "COM_COMPRA"
 
 router = APIRouter(
     prefix="/compras/compradirecta",
@@ -35,6 +39,7 @@ def crear_compra(compra: schema_compras.CompraCreate, db: Session = Depends(get_
     los resuelve el manejador global correspondiente (TransaccionValidationError/IntegrityError)
     con un mensaje amigable, en una sola llamada."""
     compra.id_emp = contexto.id_emp  # ignora el id_emp que mande el cliente en el body
+    verificar_permiso(db, contexto.usuario.id_usuario, contexto.id_emp, MENU_CODIGO, "CREAR")
     repository_compras.create_compra(db=db, obj=compra)
     return {
         "status": "success",
@@ -51,6 +56,7 @@ def actualizar_compra(id_trans: int,compra: schema_compras.CompraCreate, db: Ses
     if db_actual.id_emp != contexto.id_emp:
         # No es de la empresa activa de la sesión: se trata como si no existiera
         raise HTTPException(status_code=404, detail="Compra no encontrada")
+    verificar_permiso(db, contexto.usuario.id_usuario, contexto.id_emp, MENU_CODIGO, "EDITAR")
 
     compra.id_emp = contexto.id_emp  # ignora el id_emp que mande el cliente en el body
     repository_compras.update_compra(db=db,id_trans=id_trans, obj=compra)
@@ -68,6 +74,7 @@ def eliminar_compra(id_trans: int, db: Session = Depends(get_db), contexto: secu
         raise HTTPException(status_code=404, detail="Compra no encontrada")
     if db_actual.id_emp != contexto.id_emp:
         raise HTTPException(status_code=404, detail="Compra no encontrada")
+    verificar_permiso(db, contexto.usuario.id_usuario, contexto.id_emp, MENU_CODIGO, "ELIMINAR")
 
     repository_compras.delete_compra(db, id_trans=id_trans)
     return None

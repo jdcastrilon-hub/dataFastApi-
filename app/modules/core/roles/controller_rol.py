@@ -9,6 +9,15 @@ router = APIRouter(
     prefix="/core/roles",
     tags=["Core - Roles"])
 
+@router.get("/listCombo", response_model=list[schema_rol.RolListCombo])
+def roles_listcombo(
+    id_emp: int,
+    db: Session = Depends(get_db),
+    usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
+    """Combo liviano de roles de la empresa (sin superadmin) para el picker
+    dentro del formulario de Usuario."""
+    return repository_rol.get_roles_listcombo(db, id_emp)
+
 @router.get("/pagination", response_model=schema_rol.PaginatedRolResponse)
 def list_roles_paginacion(
     page: int = Query(0, ge=0),

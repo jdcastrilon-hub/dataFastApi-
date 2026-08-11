@@ -4,6 +4,10 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from . import repository_devolucion, schema_devolucion
 from app.core.auth import security
+from app.core.auth.permisos import verificar_permiso
+
+# Codigo del formulario en md_menu (matriz de permisos)
+MENU_CODIGO = "COM_DEVOL"
 
 router = APIRouter(
     prefix="/compras/devolucioncompras",
@@ -54,6 +58,7 @@ def crear_devolucion(devolucion: schema_devolucion.DevolucionCompraCreate, db: S
     los errores del SP o de integridad los resuelve el manejador global correspondiente
     (TransaccionValidationError/IntegrityError) con un mensaje amigable."""
     devolucion.id_emp = contexto.id_emp  # ignora el id_emp que mande el cliente en el body
+    verificar_permiso(db, contexto.usuario.id_usuario, contexto.id_emp, MENU_CODIGO, "CREAR")
     repository_devolucion.create_devolucion(db=db, obj=devolucion)
     return {
         "status": "success",
@@ -70,6 +75,7 @@ def actualizar_devolucion(id_trans: int, devolucion: schema_devolucion.Devolucio
     if db_actual.id_emp != contexto.id_emp:
         # No es de la empresa activa de la sesión: se trata como si no existiera
         raise HTTPException(status_code=404, detail="Devolucion no encontrada")
+    verificar_permiso(db, contexto.usuario.id_usuario, contexto.id_emp, MENU_CODIGO, "EDITAR")
 
     devolucion.id_emp = contexto.id_emp  # ignora el id_emp que mande el cliente en el body
     repository_devolucion.update_devolucion(db=db, id_trans=id_trans, obj=devolucion)
@@ -87,6 +93,7 @@ def eliminar_devolucion(id_trans: int, db: Session = Depends(get_db), contexto: 
         raise HTTPException(status_code=404, detail="Devolucion no encontrada")
     if db_actual.id_emp != contexto.id_emp:
         raise HTTPException(status_code=404, detail="Devolucion no encontrada")
+    verificar_permiso(db, contexto.usuario.id_usuario, contexto.id_emp, MENU_CODIGO, "ELIMINAR")
 
     repository_devolucion.delete_devolucion(db, id_trans=id_trans)
     return None

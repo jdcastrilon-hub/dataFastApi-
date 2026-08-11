@@ -72,6 +72,23 @@ class DetalleCompraLinea(BaseModel):
     class Config:
         from_attributes = True
 
+# Kardex de costos (articulo+bodega): lee s_costovariacion, ya pre-filtrada a
+# solo cambios reales de costo (ver monitorcompras_costo_kardex).
+class CostoKardexLinea(BaseModel):
+    fec_doc: date
+    documento: str
+    nro_docum: Optional[int] = None
+    vista: Optional[str] = None
+    cantidad: Optional[int] = None
+    stock_anterior: Optional[int] = None
+    costo_anterior: Decimal
+    costo_movimiento: Decimal
+    costo_nuevo_promedio: Decimal
+    usuario_mod: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
 # ****************************************************** INICIO Reporte Costos
 # Modelo principal de respuesta del Monitor
 class MonitorCosto(BaseModel):

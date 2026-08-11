@@ -1,14 +1,31 @@
 from sqlalchemy import desc, or_
 from sqlalchemy.orm import Session, joinedload
 from . import modal_impuesto
+from app.core.numeradores import repository_numerador
 
 # Máximo de entradas de auditoría que se conservan en el jsonb "logs".
 MAX_LOGS_AUDITORIA = 10
+
+# Codigo del numerador (por empresa) que identifica el consecutivo de tasa_impu
+CODIGO_NUMERADOR_IMPUESTO = "IMPUESTO"
 
 def _limitar_logs(logs):
     if not logs:
         return logs
     return logs[-MAX_LOGS_AUDITORIA:]
+
+def _obtener_tasa_impu(db: Session, id_emp: int, tasa_impu_manual):
+    """
+    Asigna la tasaImpuesto desde el numerador de la empresa (2 digitos, ver
+    docs/tecnica/specs/core/autonumeracion-catalogos.md). Si la empresa tiene
+    "requiere_consecutivo" en False, respeta lo que haya enviado el formulario
+    (modo manual) - mismo criterio que _obtener_cod_articulo/_obtener_cod_bodega.
+    """
+    siguiente = repository_numerador.siguiente_numerador(db, id_emp, CODIGO_NUMERADOR_IMPUESTO)
+    if siguiente is None:
+        return tasa_impu_manual
+
+    return repository_numerador.formatear_numerador(siguiente, longitud=2)
 
 # Lista simple (usada por el formulario de articulos y por los combos de
 # compra-directa/venta-directa/venta-pos), filtrada por empresa.
@@ -27,6 +44,7 @@ def get_impuesto(db: Session, id_impuesto: int):
 def create_impuesto(db: Session, obj):
     data = obj.model_dump()
     data["logs"] = _limitar_logs(data.get("logs"))
+    data["tasa_impu"] = _obtener_tasa_impu(db, data["id_emp"], data.get("tasa_impu"))
     db_impuesto = modal_impuesto.Impuesto(**data)
 
     db.add(db_impuesto)

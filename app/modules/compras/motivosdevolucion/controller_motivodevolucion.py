@@ -4,6 +4,10 @@ from typing import List
 from app.database import get_db
 from . import repository_motivodevolucion, schema_motivodevolucion
 from app.core.auth import security
+from app.core.auth.permisos import verificar_permiso
+
+# Codigo del formulario en md_menu (matriz de permisos)
+MENU_CODIGO = "COM_MOV"
 
 router = APIRouter(
     prefix="/compras/motivosdevolucion",
@@ -38,6 +42,7 @@ def crear_motivo(motivo: schema_motivodevolucion.MotivoDevolucionCreate, db: Ses
     (ej. codMotivo duplicado) los resuelve el manejador global de IntegrityError
     con un mensaje amigable, en una sola llamada."""
     motivo.id_emp = contexto.id_emp  # ignora el id_emp que mande el cliente en el body
+    verificar_permiso(db, contexto.usuario.id_usuario, contexto.id_emp, MENU_CODIGO, "CREAR")
     repository_motivodevolucion.create_motivo(db=db, obj=motivo)
     return {
         "status": "success",
@@ -54,6 +59,7 @@ def actualizar_motivo(id_motivo: int, motivo: schema_motivodevolucion.MotivoDevo
     if db_motivo.id_emp != contexto.id_emp:
         # No es de la empresa activa de la sesión: se trata como si no existiera
         raise HTTPException(status_code=404, detail="Motivo no encontrado")
+    verificar_permiso(db, contexto.usuario.id_usuario, contexto.id_emp, MENU_CODIGO, "EDITAR")
 
     motivo.id_emp = contexto.id_emp  # ignora el id_emp que mande el cliente en el body
     repository_motivodevolucion.update_motivo(db, id_motivo=id_motivo, obj=motivo)
@@ -71,6 +77,7 @@ def eliminar_motivo(id_motivo: int, db: Session = Depends(get_db), contexto: sec
         raise HTTPException(status_code=404, detail="Motivo no encontrado")
     if db_motivo.id_emp != contexto.id_emp:
         raise HTTPException(status_code=404, detail="Motivo no encontrado")
+    verificar_permiso(db, contexto.usuario.id_usuario, contexto.id_emp, MENU_CODIGO, "ELIMINAR")
 
     repository_motivodevolucion.delete_motivo(db, id_motivo=id_motivo)
     return None

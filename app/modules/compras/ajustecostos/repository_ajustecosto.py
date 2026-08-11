@@ -1,6 +1,6 @@
 from fastapi import HTTPException
-from sqlalchemy import desc, text
-from sqlalchemy.orm import Session , joinedload
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 from . import model_ajuste ,schema_ajustecosto
 
 # Crear un ajuste de costos
@@ -26,8 +26,8 @@ def create_ajuste(db: Session, obj: schema_ajustecosto.AjusteBase):
         db.flush() 
 
         # El SP no recibe el usuario de un contexto de sesion (Python solo lo llama con
-        # operacion/parm_trans): se toma del ultimo log, igual que get_historial_ajustes()
-        # ya hace para mostrar "quien" hizo el ajuste directo.
+        # operacion/parm_trans): se toma del ultimo log, mismo criterio ya usado para
+        # p_costos.usuario_mod en sp_compradirecta/sp_compras_devoluciones.
         usuario_mod = logs_dict[-1].get('usuario_mod') if logs_dict else None
         db.execute(
                 text("CALL public.sp_ajustecostos(:operacion,:parm_trans,:usuario)"),
@@ -37,23 +37,3 @@ def create_ajuste(db: Session, obj: schema_ajustecosto.AjusteBase):
         db.commit()
         db.refresh(bd_ajuste)
         return bd_ajuste
-
-
-def get_historial_ajustes(db: Session, id_articulo: int, id_bodega: int):
-    ajustes = db.query(model_ajuste.AjusteCostoArticulo)\
-        .filter(model_ajuste.AjusteCostoArticulo.id_articulo == id_articulo,
-                model_ajuste.AjusteCostoArticulo.id_bodega == id_bodega)\
-        .order_by(desc(model_ajuste.AjusteCostoArticulo.fec_doc), desc(model_ajuste.AjusteCostoArticulo.id_trans))\
-        .all()
-
-    resultado = []
-    for a in ajustes:
-        usuario = a.logs[-1].get('usuario_mod') if a.logs else None
-        resultado.append({
-            "fecha": a.fec_doc,
-            "costo_actual": a.imp_costo_actual,
-            "costo_nuevo": a.imp_costo_nuevo,
-            "observaciones": a.observaciones,
-            "usuario": usuario
-        })
-    return resultado

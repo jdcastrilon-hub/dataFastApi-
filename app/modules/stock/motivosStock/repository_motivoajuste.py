@@ -1,18 +1,35 @@
 from sqlalchemy import desc, or_
 from sqlalchemy.orm import Session
 from . import model_motivoajuste ,schema_ajuste
+from app.core.numeradores import repository_numerador
 
 # Máximo de entradas de auditoría que se conservan en el jsonb "logs".
 MAX_LOGS_AUDITORIA = 10
+
+# Codigo del numerador (por empresa) que identifica el consecutivo de cod_motivo
+CODIGO_NUMERADOR_MOTIVOAJUSTE = "MOTIVOAJUSTE"
 
 def _limitar_logs(logs):
     if not logs:
         return logs
     return logs[-MAX_LOGS_AUDITORIA:]
 
+def _obtener_cod_motivo(db: Session, id_emp: int, cod_motivo_manual):
+    """
+    Asigna el codMotivo desde el numerador de la empresa (2 digitos, ver
+    docs/tecnica/specs/core/autonumeracion-catalogos.md). Si la empresa tiene
+    "requiere_consecutivo" en False, respeta lo que haya enviado el formulario
+    (modo manual) - mismo criterio que _obtener_cod_articulo/_obtener_cod_bodega.
+    """
+    siguiente = repository_numerador.siguiente_numerador(db, id_emp, CODIGO_NUMERADOR_MOTIVOAJUSTE)
+    if siguiente is None:
+        return cod_motivo_manual
+
+    return repository_numerador.formatear_numerador(siguiente, longitud=2)
+
 def get_all(db: Session, id_emp: int):
         return db.query(model_motivoajuste.MotivoAjuste)\
-            .filter(model_motivoajuste.MotivoAjuste.id_emp == id_emp)\
+            .filter(model_motivoajuste.MotivoAjuste.id_emp == id_emp , model_motivoajuste.MotivoAjuste.activo == True)\
             .all()
 
 # Obtener un motivo por ID
@@ -23,6 +40,7 @@ def get_motivo(db: Session, id_motivo: int):
 def create_motivo(db: Session, obj: schema_ajuste.MotivoAjusteCreate):
     data = obj.model_dump()
     data["logs"] = _limitar_logs(data.get("logs"))
+    data["cod_motivo"] = _obtener_cod_motivo(db, data["id_emp"], data.get("cod_motivo"))
     db_motivo = model_motivoajuste.MotivoAjuste(**data)
 
     db.add(db_motivo)

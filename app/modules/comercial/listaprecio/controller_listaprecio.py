@@ -13,6 +13,25 @@ router = APIRouter(
     tags=["Comercial - Lista de Precios"])
 
 
+@router.get("/listCombo", response_model=list[schema_listaprecio.ListaPrecioCombo])
+def list_listaprecio_combo(
+    db: Session = Depends(get_db),
+    contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)):
+    """Listas base (nunca de cliente) que el usuario puede usar al vender: la
+    general siempre esta habilitada, las demas (ej. Mayorista) solo si tiene un
+    permiso explicito en m_listaprecioxuser."""
+    return repository_listaprecio.get_listaprecio_combo(db, contexto.id_emp, contexto.usuario.id_usuario)
+
+
+@router.get("/listComboActivas", response_model=list[schema_listaprecio.ListaPrecioComboTodas])
+def list_listaprecio_combo_todas(
+    db: Session = Depends(get_db),
+    contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)):
+    """Todas las listas activas (base + de cliente) - usado por la carga masiva de
+    precios, que puede apuntar a cualquier lista activa."""
+    return repository_listaprecio.get_listaprecio_combo_todas(db, contexto.id_emp)
+
+
 @router.get("/pagination", response_model=schema_listaprecio.PaginatedListaPrecioResponse)
 def list_listaprecio_paginacion(
     page: int = Query(0, ge=0),

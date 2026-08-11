@@ -39,6 +39,20 @@ class ListaPrecioCreate(ListaPrecioBase):
 class ListaPrecioCombo(BaseModel):
     id_lista: int = Field(alias="idLista")
     nombre: str = Field(alias="nombre", max_length=100)
+    # Permite que el selector auto-seleccione la general por defecto sin
+    # necesitar una segunda llamada.
+    es_general: bool = Field(alias="esGeneral")
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+
+# Esquema para combos que necesitan TODAS las listas activas, no solo las base
+# (ej. carga masiva de precios: cualquier lista activa admite carga por archivo).
+class ListaPrecioComboTodas(BaseModel):
+    id_lista: int = Field(alias="idLista")
+    nombre: str = Field(alias="nombre", max_length=100)
+    es_general: bool = Field(alias="esGeneral")
+    cliente: Optional["ClienteSimple"] = None
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 

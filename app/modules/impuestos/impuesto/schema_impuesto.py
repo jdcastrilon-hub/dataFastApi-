@@ -49,7 +49,7 @@ class ImpuestoCreate(BaseModel):
     # LoginService.getIdEmpresaActual() al guardar (patron "empresa de sesion").
     id_emp: int = Field(alias="idEmp")
     id_tipo: int = Field(alias="idTipo")
-    tasa_impu: str = Field(alias="tasaImpuesto", max_length=10)
+    tasa_impu: Optional[str] = Field(alias="tasaImpuesto", max_length=10, default=None)
     nombre_tasa: str = Field(alias="nombreTasa", max_length=50)
     es_exenta: str = Field(alias="exenta", max_length=2)
     porc_tasa: Decimal = Field(alias="porcentaje")

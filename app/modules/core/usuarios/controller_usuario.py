@@ -63,7 +63,7 @@ def actualizar_usuario(usuario_id: int, id_emp: int, db_usuario: esquema_usuario
     if db_actual is None:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-    repository_usuario.update_usuario(db, usuario_id=usuario_id, obj=db_usuario)
+    repository_usuario.update_usuario(db, usuario_id=usuario_id, id_emp=id_emp, obj=db_usuario)
     return {
         "status": "success",
         "message": "Usuario editado exitosamente",

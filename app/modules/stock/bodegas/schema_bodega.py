@@ -10,8 +10,9 @@ class LogEntry(BaseModel):
 
 # Esquema Molde
 class BodegaBase(BaseModel):
-    id_sucursal: int = Field(alias="idSucursal") 
-    cod_bodega: str = Field(alias="codBodega", max_length=20)
+    id_emp: Optional[int] = Field(alias="idEmpresa", default=None)
+    id_sucursal: int = Field(alias="idSucursal")
+    cod_bodega: Optional[str] = Field(alias="codBodega", max_length=20, default=None)
     nom_bodega: str = Field(alias="nomBodega", max_length=80)
     principal: str = Field(alias="bodegaPrincipal", max_length=2, description="SI/NO o S/N")
     tiene_ubicaciones: str = Field(alias="manejaUbicaciones", max_length=2)

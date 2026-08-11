@@ -7,10 +7,9 @@ from app.modules.core.usuarios import model_usuario
 from app.core.auth import security
 from app.core.auth.permisos import verificar_permiso
 
-# Codigo del formulario en md_menu (matriz de permisos). m_bodegas no tiene
-# columna id_emp propia - se resuelve via bodega -> sucursal -> empresa
-# (ver get_bodegas_paginated). El id_emp de estos endpoints tambien se usa
-# para el chequeo de permiso.
+# Codigo del formulario en md_menu (matriz de permisos). El id_emp de estos
+# endpoints (tomado del JWT via contexto) se usa tanto para filtrar/acotar
+# los datos como para el chequeo de permiso.
 MENU_CODIGO = "INV_BOD"
 
 router = APIRouter(
@@ -35,9 +34,9 @@ def list_bodegas_paginacion(
     return repository_bodega.get_bodegas_paginated(db, page, size, contexto.id_emp, texto)
 
 @router.get("/search", response_model=schema_bodega.BodegaResponse)
-def obtener_bodega(bodega_id: int, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
-    """Busca una bodega específica x ID."""
-    db_bodega = repository_bodega.get_bodega(db, bodega_id=bodega_id)
+def obtener_bodega(bodega_id: int, db: Session = Depends(get_db), contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)):
+    """Busca una bodega específica x ID, acotada a la empresa activa."""
+    db_bodega = repository_bodega.get_bodega(db, bodega_id=bodega_id, id_emp=contexto.id_emp)
     if db_bodega is None:
         raise HTTPException(status_code=404, detail="Bodega no encontrada")
     return db_bodega
@@ -50,6 +49,7 @@ def crear_bodega(bodega: schema_bodega.BodegaCreate, db: Session = Depends(get_d
     (ej. codBodega duplicado) los resuelve el manejador global de IntegrityError
     con un mensaje amigable, en una sola llamada (sin endpoint de validación previa)."""
     verificar_permiso(db, contexto.usuario.id_usuario, contexto.id_emp, MENU_CODIGO, "CREAR")
+    bodega.id_emp = contexto.id_emp  # ignora el id_emp que mande el cliente en el body
     repository_bodega.create_bodega(db=db, bodega=bodega)
     return {
         "status": "success",
@@ -60,11 +60,12 @@ def crear_bodega(bodega: schema_bodega.BodegaCreate, db: Session = Depends(get_d
 @router.put("/edit")
 def actualizar_bodega(bodega_id: int, bodega: schema_bodega.BodegaCreate, db: Session = Depends(get_db), contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)):
     """Actualiza los datos de una bodega existente (ver nota en crear_bodega sobre el manejo de errores)."""
-    db_bodega = repository_bodega.get_bodega(db, bodega_id=bodega_id)
+    db_bodega = repository_bodega.get_bodega(db, bodega_id=bodega_id, id_emp=contexto.id_emp)
     if db_bodega is None:
         raise HTTPException(status_code=404, detail="Bodega no encontrada")
     verificar_permiso(db, contexto.usuario.id_usuario, contexto.id_emp, MENU_CODIGO, "EDITAR")
 
+    bodega.id_emp = contexto.id_emp  # ignora el id_emp que mande el cliente en el body
     repository_bodega.update_bodega(db, bodega_id=bodega_id, bodega_data=bodega)
     return {
             "status": "success",

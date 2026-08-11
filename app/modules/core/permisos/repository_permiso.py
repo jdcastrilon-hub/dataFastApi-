@@ -9,11 +9,23 @@ from app.modules.core.roles.repository_rol import usuario_es_superadmin
 ORDEN_ACCIONES = ['VER', 'CREAR', 'EDITAR', 'BUSCAR', 'ELIMINAR']
 
 
-def get_modulos_combo(db: Session):
-    return db.query(model_permiso.Modulo)\
-        .filter(model_permiso.Modulo.activo == True)\
-        .order_by(model_permiso.Modulo.orden)\
-        .all()
+# Combo de modulos para el filtro de la matriz de Permisos. A diferencia de
+# obtener_menu/get_mis_permisos (donde ni el propio superadmin ve un modulo
+# deshabilitado para su empresa - regla central de la Pieza 1), aca el
+# superadmin SI ve todos los modulos, incluidos los deshabilitados: esta
+# pantalla es de configuracion (pre-armar permisos de un modulo mientras esta
+# apagado), no de uso/navegacion. Un rol delegado no-superadmin con acceso a
+# Permisos (Pieza 3, techo de delegacion) solo ve los modulos activos de la
+# empresa - no tiene sentido que configure algo que ni siquiera puede navegar.
+def get_modulos_combo(db: Session, id_emp: int, id_usuario: int):
+    query = db.query(model_permiso.Modulo).filter(model_permiso.Modulo.activo == True)
+
+    if not usuario_es_superadmin(db, id_usuario, id_emp):
+        deshabilitados = _ids_modulo_deshabilitados(db, id_emp)
+        if deshabilitados:
+            query = query.filter(model_permiso.Modulo.id_modulo.notin_(deshabilitados))
+
+    return query.order_by(model_permiso.Modulo.orden).all()
 
 
 # Roles superadmin quedan excluidos de este combo SIEMPRE, incluso para un
@@ -36,7 +48,7 @@ def rol_pertenece_a_empresa(db: Session, id_rol: int, id_emp: int) -> bool:
     ).first() is not None
 
 
-def get_matriz(db: Session, id_rol: int, id_modulo: int):
+def get_matriz(db: Session, id_rol: int, id_modulo: int, id_usuario: int, id_emp: int):
     # Formularios reales del modulo (con ruta propia, no los contenedores tipo
     # "Maestros"/"Transacciones" que no tienen acciones propias).
     formularios = db.query(Menu)\
@@ -46,6 +58,13 @@ def get_matriz(db: Session, id_rol: int, id_modulo: int):
 
     if not formularios:
         return []
+
+    # Techo de delegacion (Pieza 3): quien graba solo puede VER (para otorgar)
+    # lo que el mismo ya tiene. get_mis_permisos ya resuelve superadmin (le
+    # devuelve todo, sin filtro real aca) vs rol normal (solo lo suyo) - un
+    # formulario/accion que quien graba no tiene ni siquiera aparece en la
+    # matriz, no solo queda deshabilitado.
+    mis_permisos = get_mis_permisos(db, id_usuario, id_emp)
 
     ids_menu = [f.id_menu for f in formularios]
 
@@ -64,7 +83,14 @@ def get_matriz(db: Session, id_rol: int, id_modulo: int):
 
     resultado = []
     for f in formularios:
-        acciones_menu = permisos_por_menu.get(f.id_menu, [])
+        acciones_propias = set(mis_permisos.get(f.codigo, []))
+        if not acciones_propias:
+            continue  # sin ningun permiso propio sobre este formulario, no aparece
+
+        acciones_menu = [mp for mp in permisos_por_menu.get(f.id_menu, []) if mp.permiso.codigo in acciones_propias]
+        if not acciones_menu:
+            continue
+
         # Orden fijo Ver/Crear/Editar/Buscar/Eliminar, solo las que existan para este formulario
         acciones_ordenadas = sorted(acciones_menu, key=lambda mp: ORDEN_ACCIONES.index(mp.permiso.codigo))
         resultado.append({
@@ -89,24 +115,27 @@ def get_matriz(db: Session, id_rol: int, id_modulo: int):
 # frontend (se trae una sola vez por sesion/empresa y se cachea en el cliente,
 # en vez de consultar al backend en cada navegacion).
 def get_mis_permisos(db: Session, id_usuario: int, id_emp: int) -> dict[str, list[str]]:
-    # Se calcula una sola vez y se aplica a ambos branches (superadmin
-    # incluido) - un modulo deshabilitado para la empresa no debe aparecer
-    # ni siquiera para su propio superadmin.
-    ids_modulo_deshabilitados = _ids_modulo_deshabilitados(db, id_emp)
-
     if usuario_es_superadmin(db, id_usuario, id_emp):
         # Acceso total: todas las acciones de todos los formularios, incluidos
-        # los que se agreguen en el futuro (no depende de md_rol_permiso).
+        # los que se agreguen en el futuro (no depende de md_rol_permiso), y
+        # SIN filtrar por modulos deshabilitados - el superadmin es quien
+        # controla ese interruptor, nunca queda bloqueado por su propia
+        # decision (ver docs/tecnica/specs/core/delegacion-permisos-menu-exclusivo.md,
+        # Pieza 1 - regla revisada 2026-08-04).
         filas = db.query(Menu.codigo, model_permiso.Permiso.codigo)\
             .select_from(model_permiso.MenuPermiso)\
             .join(Menu, Menu.id_menu == model_permiso.MenuPermiso.id_menu)\
             .join(model_permiso.Permiso, model_permiso.Permiso.id_permiso == model_permiso.MenuPermiso.id_permiso)\
-            .filter(Menu.id_modulo.notin_(ids_modulo_deshabilitados))\
             .all()
         resultado_total: dict[str, list[str]] = {}
         for codigo_menu, codigo_accion in filas:
             resultado_total.setdefault(codigo_menu, []).append(codigo_accion)
         return resultado_total
+
+    # A diferencia del superadmin, el resto de roles si queda limitado a los
+    # modulos que la empresa tiene activos - es la restriccion que le permite
+    # al Administrador de la empresa delegar solo lo que esta habilitado.
+    ids_modulo_deshabilitados = _ids_modulo_deshabilitados(db, id_emp)
 
     ids_rol = [
         row.id_rol for row in
@@ -190,24 +219,39 @@ def set_modulo_habilitado(db: Session, id_emp: int, id_modulo: int, activo: bool
     db.commit()
 
 
-def guardar_matriz(db: Session, id_rol: int, id_modulo: int, otorgados: list[int]):
-    # Universo de id_menu_permiso que pertenecen a este modulo (lo unico que esta
-    # pantalla puede tocar - no debe afectar los permisos de otros modulos).
+def guardar_matriz(db: Session, id_rol: int, id_modulo: int, otorgados: list[int], id_usuario: int, id_emp: int):
     ids_menu_del_modulo = [
         row.id_menu for row in db.query(Menu.id_menu).filter(Menu.id_modulo == id_modulo).all()
     ]
-    ids_menu_permiso_del_modulo = set(
-        row.id_menu_permiso for row in
-        db.query(model_permiso.MenuPermiso.id_menu_permiso)
-        .filter(model_permiso.MenuPermiso.id_menu.in_(ids_menu_del_modulo)).all()
-    )
 
-    # Solo se aceptan ids que realmente pertenecen al modulo filtrado (defensivo).
-    otorgados_validos = ids_menu_permiso_del_modulo.intersection(otorgados)
+    filas_modulo = db.query(model_permiso.MenuPermiso, Menu.codigo, model_permiso.Permiso.codigo)\
+        .join(Menu, Menu.id_menu == model_permiso.MenuPermiso.id_menu)\
+        .join(model_permiso.Permiso, model_permiso.Permiso.id_permiso == model_permiso.MenuPermiso.id_permiso)\
+        .filter(model_permiso.MenuPermiso.id_menu.in_(ids_menu_del_modulo))\
+        .all()
+
+    # Universo de id_menu_permiso que esta pantalla puede tocar: los del
+    # modulo filtrado, Y (Pieza 3, techo de delegacion) acotado a lo que quien
+    # graba tiene el mismo - un rol no-superadmin no puede ni borrar un
+    # id_menu_permiso que no ve en su propia matriz filtrada (get_matriz), de
+    # lo contrario podria revocar en silencio un permiso ajeno que ni siquiera
+    # sabe que existe. El superadmin no tiene techo, toca todo el modulo.
+    if usuario_es_superadmin(db, id_usuario, id_emp):
+        ids_menu_permiso_tocables = set(mp.id_menu_permiso for mp, _, _ in filas_modulo)
+    else:
+        mis_permisos = get_mis_permisos(db, id_usuario, id_emp)
+        ids_menu_permiso_tocables = set(
+            mp.id_menu_permiso for mp, menu_codigo, accion_codigo in filas_modulo
+            if accion_codigo in mis_permisos.get(menu_codigo, [])
+        )
+
+    # Solo se aceptan ids que realmente pertenecen al modulo Y estan dentro
+    # del techo de delegacion de quien graba (defensivo).
+    otorgados_validos = ids_menu_permiso_tocables.intersection(otorgados)
 
     db.query(model_permiso.RolPermiso).filter(
         model_permiso.RolPermiso.id_rol == id_rol,
-        model_permiso.RolPermiso.id_menu_permiso.in_(ids_menu_permiso_del_modulo)
+        model_permiso.RolPermiso.id_menu_permiso.in_(ids_menu_permiso_tocables)
     ).delete(synchronize_session=False)
     db.flush()
 

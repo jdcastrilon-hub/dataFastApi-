@@ -11,10 +11,10 @@ class LogEntry(BaseModel):
 # Esquema Molde
 class MotivoAjusteBase(BaseModel):
     id_emp: int = Field(alias="idEmp")
-    cod_motivo: str = Field(alias="codMotivo", max_length=10)
+    cod_motivo: Optional[str] = Field(alias="codMotivo", max_length=10, default=None)
     nom_motivo: str = Field(alias="nomMotivo", max_length=80)
     signo: int = Field(alias="signo")
-    activo: str = Field(alias="activo", max_length=2)
+    activo: bool = Field(alias="activo")
     cta_inventario: str = Field(alias="ctaInventario", max_length=15)
     fecha_mod: Optional[datetime] = Field(alias="fechaMod", default=None)
     logs: List[LogEntry]
@@ -37,7 +37,7 @@ class MotivoAjustePaginacion(BaseModel):
     id: int = Field(alias="id")
     cod_motivo: str = Field(alias="motivo", max_length=10)
     nom_motivo: str = Field(alias="nombreMotivo", max_length=80)
-    activo: str = Field(alias="activo", max_length=2)
+    activo: bool = Field(alias="activo")
     fecha_mod: Optional[datetime] = Field(alias="fechaMod", default=None)
 
     model_config = ConfigDict(

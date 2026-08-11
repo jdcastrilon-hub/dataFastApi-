@@ -5,6 +5,10 @@ from typing import List
 from app.database import get_db
 from . import repository_impuesto , schema_impuesto
 from app.core.auth import security
+from app.core.auth.permisos import verificar_permiso
+
+# Codigo del formulario en md_menu (matriz de permisos)
+MENU_CODIGO = "COM_IMPUESTO"
 
 router = APIRouter(
     prefix="/impuesto/tasas",
@@ -48,6 +52,7 @@ def crear_impuesto(impuesto: schema_impuesto.ImpuestoCreate, db: Session = Depen
     No se atrapa la excepción aquí a propósito: así el manejador global de
     IntegrityError da un mensaje amigable si (tipoImpuesto, tasaImpuesto) ya existe."""
     impuesto.id_emp = contexto.id_emp  # ignora el id_emp que mande el cliente en el body
+    verificar_permiso(db, contexto.usuario.id_usuario, contexto.id_emp, MENU_CODIGO, "CREAR")
     repository_impuesto.create_impuesto(db=db, obj=impuesto)
     return {
         "status": "success",
@@ -64,6 +69,7 @@ def actualizar_impuesto(id_impuesto: int, impuesto: schema_impuesto.ImpuestoCrea
     if db_impuesto.id_emp != contexto.id_emp:
         # No es de la empresa activa de la sesión: se trata como si no existiera
         raise HTTPException(status_code=404, detail="Impuesto no encontrado")
+    verificar_permiso(db, contexto.usuario.id_usuario, contexto.id_emp, MENU_CODIGO, "EDITAR")
 
     impuesto.id_emp = contexto.id_emp  # ignora el id_emp que mande el cliente en el body
     repository_impuesto.update_impuesto(db, id_impuesto=id_impuesto, obj=impuesto)
@@ -81,6 +87,7 @@ def eliminar_impuesto(id_impuesto: int, db: Session = Depends(get_db), contexto:
         raise HTTPException(status_code=404, detail="Impuesto no encontrado")
     if db_impuesto.id_emp != contexto.id_emp:
         raise HTTPException(status_code=404, detail="Impuesto no encontrado")
+    verificar_permiso(db, contexto.usuario.id_usuario, contexto.id_emp, MENU_CODIGO, "ELIMINAR")
 
     repository_impuesto.delete_impuesto(db, id_impuesto=id_impuesto)
     return None

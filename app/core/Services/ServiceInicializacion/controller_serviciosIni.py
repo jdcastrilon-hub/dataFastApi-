@@ -37,6 +37,9 @@ def get_venta_disponible(
     idACodBarra: int ,
     idBodega: int ,
     idEstado: int ,
+    # 0 = sin lista resuelta todavia por el llamador - la funcion SQL cae sola
+    # a la lista general de la empresa duena del articulo en ese caso.
+    idLista: int = 0,
     db: Session = Depends(get_db)
 ):
-    return repository_serviciosIni.get_venta_disponible(db,idArticulo,idACodBarra, idBodega, idEstado) 
+    return repository_serviciosIni.get_venta_disponible(db,idArticulo,idACodBarra, idBodega, idEstado, idLista)

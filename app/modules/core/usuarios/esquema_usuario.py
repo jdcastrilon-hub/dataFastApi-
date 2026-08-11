@@ -25,6 +25,17 @@ class UsuarioBase(BaseModel):
     # fechaNacimiento, email, etc.) - PersonaBase usa un juego de alias distinto
     # (codTit, fecNacimiento, sin alias en mail/sexo) pensado para otro caso de uso.
     persona: Optional[schema_personas.PersonaDetalle] = None
+    # Aprovecha el alta/edicion del usuario para asignarlo de una vez a sus
+    # tablas base (en vez de crearlo y despues ir a Roles/Sucursales por
+    # separado). idRol es unico (no lista): un usuario solo puede tener un rol
+    # no-superadmin por empresa (ver repository_rol.py::_validar_un_rol_por_usuario,
+    # misma regla aplicada del otro lado en la grilla de usuarios del rol) -
+    # None/omitido significa "sin rol asignado todavia". Sucursales si es lista,
+    # ahi no aplica la misma restriccion. El repository valida que cada id
+    # pertenezca a id_emp antes de insertar (defensivo, mismo criterio que
+    # guardar_matriz).
+    id_rol: Optional[int] = Field(default=None, alias="idRol")
+    sucursales: List[int] = Field(default=[], alias="sucursales")
 
     model_config = ConfigDict(
         from_attributes=True,
@@ -43,6 +54,10 @@ class UsuarioResponse(BaseModel):
     fecha_mod: Optional[datetime] = Field(None, alias="fechaMod")
     logs: List[LogEntry]
     persona: schema_personas.PersonaDetalle
+    # Rol/sucursales actualmente asignados (para pre-seleccionar los pickers
+    # al editar) - solo los ids, el picker ya trae el combo completo.
+    id_rol: Optional[int] = Field(default=None, alias="idRol")
+    sucursales: List[int] = Field(default=[], alias="sucursales")
 
     model_config = ConfigDict(
         from_attributes=True,

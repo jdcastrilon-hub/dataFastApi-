@@ -84,6 +84,23 @@ def create_empresa(db: Session, obj: schema_empresa.EmpresaCreate):
         db.add(bd_rol)
         db.flush()  # necesitamos bd_rol.id_rol
 
+        # Rol base "Admin" - toda empresa nace con SUPERADMIN + Admin, para
+        # tener un orden consistente entre empresas. Nace vacio (sin ningun
+        # md_rol_permiso) - el superadmin lo configura desde Permisos, mismo
+        # criterio deny-by-default que ya usa el resto del sistema. No se
+        # asocia a ningun usuario aca (a diferencia de SUPERADMIN): queda como
+        # plantilla lista para asignar a los usuarios que se creen despues.
+        # es_protegido=True: no se puede eliminar desde la pantalla de Roles
+        # (ver repository_rol.py::delete_rol).
+        db.add(model_rol.Rol(
+            id_emp=bd_empresa.id_emp,
+            codigo="Admin",
+            nombre="Administrador",
+            descripcion="Rol base de la empresa, sin permisos precargados - se configura desde Permisos",
+            activo=True,
+            es_protegido=True,
+        ))
+
         # El usuario administrador debe preexistir - no se crea aqui ni se
         # pre-valida (una sola llamada de guardado que falla con mensaje claro,
         # no verificaciones aparte). Si no existe, id_usuario queda None y el

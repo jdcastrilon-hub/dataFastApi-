@@ -1,18 +1,35 @@
 from sqlalchemy import desc, or_
 from sqlalchemy.orm import Session
 from . import model_estado, schema_estado
+from app.core.numeradores import repository_numerador
 
 # Máximo de entradas de auditoría que se conservan en el jsonb "logs".
 MAX_LOGS_AUDITORIA = 10
+
+# Codigo del numerador (por empresa) que identifica el consecutivo de cod_estado
+CODIGO_NUMERADOR_ESTADO = "ESTADO"
 
 def _limitar_logs(logs):
     if not logs:
         return logs
     return logs[-MAX_LOGS_AUDITORIA:]
 
+def _obtener_cod_estado(db: Session, id_emp: int, cod_estado_manual):
+    """
+    Asigna el codEstado desde el numerador de la empresa (2 digitos, ver
+    docs/tecnica/specs/core/autonumeracion-catalogos.md). Si la empresa tiene
+    "requiere_consecutivo" en False, respeta lo que haya enviado el formulario
+    (modo manual) - mismo criterio que _obtener_cod_articulo/_obtener_cod_bodega.
+    """
+    siguiente = repository_numerador.siguiente_numerador(db, id_emp, CODIGO_NUMERADOR_ESTADO)
+    if siguiente is None:
+        return cod_estado_manual
+
+    return repository_numerador.formatear_numerador(siguiente, longitud=2)
+
 # Obtener todos los estados de la empresa (usado por el combo)
 def get_estados(db: Session, id_emp: int):
-    return db.query(model_estado.Estado).filter(model_estado.Estado.id_emp == id_emp).all()
+    return db.query(model_estado.Estado).filter(model_estado.Estado.id_emp == id_emp , model_estado.Estado.activo==True).all()
 
 # Obtener un estado por ID
 def get_estado(db: Session, estado_id: int):
@@ -22,6 +39,7 @@ def get_estado(db: Session, estado_id: int):
 def create_estado(db: Session, obj: schema_estado.EstadoCreate):
     data = obj.model_dump()
     data["logs"] = _limitar_logs(data.get("logs"))
+    data["cod_estado"] = _obtener_cod_estado(db, data["id_emp"], data.get("cod_estado"))
     db_estado = model_estado.Estado(**data)
 
     db.add(db_estado)

@@ -139,6 +139,14 @@ def get_detalle_compra(db: Session, id_trans: int):
     return [row._mapping for row in result]
 
 
+def get_costo_kardex(db: Session, id_emp: int, id_articulo: int, id_bodega: int):
+    result = db.execute(
+        text("SELECT * FROM monitorcompras_costo_kardex(:id_emp, :id_articulo, :id_bodega)"),
+        {"id_emp": id_emp, "id_articulo": id_articulo, "id_bodega": id_bodega}
+    ).all()
+    return [row._mapping for row in result]
+
+
 def get_devoluciones_compra(db: Session, id_compra_origen: int):
     result = db.execute(
         text("SELECT * FROM monitorcompras_devoluciones(:id_compra_origen)"),

@@ -42,17 +42,21 @@ def obtener_menu(db: Session, id_usuario: int, id_emp: int):
         .all()
     )
 
-    # Modulos deshabilitados para la empresa activa quedan fuera del universo
-    # completo ANTES de mirar rol/superadmin - ni el propio superadmin de la
-    # empresa ve un modulo que su empresa tiene apagado (ver
-    # docs/tecnica/specs/core/delegacion-permisos-menu-exclusivo.md, Pieza 1).
-    ids_modulo_deshabilitados = _ids_modulo_deshabilitados(db, id_emp)
-    if ids_modulo_deshabilitados:
-        registros = [r for r in registros if r.id_modulo not in ids_modulo_deshabilitados]
+    es_superadmin = usuario_es_superadmin(db, id_usuario, id_emp)
+
+    # Modulos deshabilitados para la empresa activa quedan fuera del universo,
+    # salvo para el superadmin de la propia empresa: es quien controla ese
+    # interruptor (md_empresaxmodulo), asi que nunca queda bloqueado por su
+    # propia decision (ver docs/tecnica/specs/core/delegacion-permisos-menu-exclusivo.md,
+    # Pieza 1 - regla revisada 2026-08-04, antes tampoco el superadmin lo veia).
+    if not es_superadmin:
+        ids_modulo_deshabilitados = _ids_modulo_deshabilitados(db, id_emp)
+        if ids_modulo_deshabilitados:
+            registros = [r for r in registros if r.id_modulo not in ids_modulo_deshabilitados]
 
     # Superadmin: acceso total, ni siquiera pasa por md_rol_permiso (incluye
     # formularios futuros sin necesidad de otorgarselos explicitamente).
-    if usuario_es_superadmin(db, id_usuario, id_emp):
+    if es_superadmin:
         ids_con_ver = set(item.id_menu for item in registros)
     else:
         ids_con_ver = _ids_menu_visibles(db, id_usuario, id_emp)

@@ -18,7 +18,7 @@ class TipoImpuesto(Base):
 class Impuesto(Base):
     __tablename__ = 'm_impuesto'
     __table_args__ = (
-        UniqueConstraint('id_tipo', 'tasa_impu', name='impuestos_pk_unic'),
+        UniqueConstraint('id_emp', 'tasa_impu', name='impuestos_pk_unic'),
         {'schema': 'public'}
     )
 

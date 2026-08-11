@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
-from datetime import date, datetime
+from datetime import datetime
 from typing import List, Optional, Any
 
 #Esquema para leer la varaiable Logs
@@ -28,11 +28,3 @@ class AjusteBase(BaseModel):
     model_config = ConfigDict(
     from_attributes=True,
     populate_by_name=True)
-
-
-class HistorialAjusteCosto(BaseModel):
-    fecha: date
-    costo_actual: Decimal
-    costo_nuevo: Decimal
-    observaciones: Optional[str] = None
-    usuario: Optional[str] = None

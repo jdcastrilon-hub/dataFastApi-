@@ -4,6 +4,7 @@ from . import model_usuario, esquema_usuario
 from app.modules.compras.personas import modelo_personas
 from app.modules.core.empresas.model_empresa import EmpresaXUser
 from app.modules.core.roles import model_rol
+from app.modules.core.sucursales import model_sucursal
 from app.core.auth.security import obtener_password_hash
 
 # Máximo de entradas de auditoría que se conservan en el jsonb "logs".
@@ -45,13 +46,86 @@ def find_usuarios_by_query(db: Session, query: str, id_emp: int):
 
 # Obtener un usuario por ID, solo si pertenece a la empresa indicada (con su persona asociada)
 def get_usuario(db: Session, usuario_id: int, id_emp: int):
-    return db.query(model_usuario.Usuario)\
+    db_usuario = db.query(model_usuario.Usuario)\
         .join(EmpresaXUser, EmpresaXUser.id_usuario == model_usuario.Usuario.id_usuario)\
         .options(joinedload(model_usuario.Usuario.persona))\
         .filter(
             model_usuario.Usuario.id_usuario == usuario_id,
             EmpresaXUser.id_emp == id_emp
         ).first()
+
+    if db_usuario:
+        # Atributos ad-hoc (no son columnas/relationship del modelo) - solo para
+        # que UsuarioResponse pueda devolver el rol/sucursales ya asignados y
+        # el formulario de edicion los pre-seleccione en los pickers.
+        db_usuario.id_rol = _id_rol_asignado(db, usuario_id, id_emp)
+        db_usuario.sucursales = _ids_sucursal_asignada(db, usuario_id, id_emp)
+
+    return db_usuario
+
+
+# Un usuario tiene a lo sumo un rol no-superadmin por empresa (ver
+# repository_rol.py::_validar_un_rol_por_usuario) - de haber mas de uno por
+# alguna inconsistencia previa a esta regla, se devuelve cualquiera de ellos,
+# no es un caso que deberia poder ocurrir de aca en adelante.
+def _id_rol_asignado(db: Session, usuario_id: int, id_emp: int) -> int | None:
+    fila = db.query(model_rol.RolXUsuario.id_rol)\
+        .join(model_rol.Rol, model_rol.Rol.id_rol == model_rol.RolXUsuario.id_rol)\
+        .filter(
+            model_rol.RolXUsuario.id_usuario == usuario_id,
+            model_rol.Rol.id_emp == id_emp,
+            model_rol.Rol.es_superadmin == False
+        ).first()
+    return fila.id_rol if fila else None
+
+
+def _ids_sucursal_asignada(db: Session, usuario_id: int, id_emp: int) -> list[int]:
+    return [
+        row.id_sucursal for row in
+        db.query(model_sucursal.SucursalXUsuario.id_sucursal)
+        .join(model_sucursal.Sucursal, model_sucursal.Sucursal.id == model_sucursal.SucursalXUsuario.id_sucursal)
+        .filter(model_sucursal.SucursalXUsuario.id_usuario == usuario_id, model_sucursal.Sucursal.id_emp == id_emp)
+        .all()
+    ]
+
+
+# Reemplaza (borra e reinserta) el rol/sucursales de un usuario dentro de UNA
+# sola empresa - un usuario puede pertenecer a varias empresas (o tener otro
+# rol en otra), asi que el borrado nunca es "todo lo del usuario", siempre
+# acotado a lo que pertenece a este id_emp. Los ids recibidos se validan
+# contra la empresa (defensivo, se descartan en silencio los que no
+# pertenezcan - mismo criterio que guardar_matriz). Los roles superadmin
+# quedan fuera de este picker en ambas direcciones (ni se otorgan ni se
+# revocan desde aca) - esa asignacion sigue siendo exclusiva de la propia
+# pantalla de Roles. Un usuario solo puede tener UN rol no-superadmin por
+# empresa (ver repository_rol.py::_validar_un_rol_por_usuario, misma regla
+# aplicada del otro lado en la grilla de usuarios del rol) - id_rol_nuevo es
+# unico, no una lista, asi que la reemplazamos directamente en vez de
+# necesitar una validacion de conflicto (siempre reemplaza, nunca se suma).
+def _sincronizar_roles_sucursales(db: Session, usuario_id: int, id_emp: int, id_rol_nuevo: int | None, ids_sucursal: list[int]):
+    ids_rol_asignables = set(
+        row.id_rol for row in
+        db.query(model_rol.Rol.id_rol)
+        .filter(model_rol.Rol.id_emp == id_emp, model_rol.Rol.es_superadmin == False)
+        .all()
+    )
+    ids_sucursal_de_la_empresa = set(
+        row.id for row in db.query(model_sucursal.Sucursal.id).filter(model_sucursal.Sucursal.id_emp == id_emp).all()
+    )
+
+    db.query(model_rol.RolXUsuario).filter(
+        model_rol.RolXUsuario.id_usuario == usuario_id,
+        model_rol.RolXUsuario.id_rol.in_(ids_rol_asignables)
+    ).delete(synchronize_session=False)
+    db.query(model_sucursal.SucursalXUsuario).filter(
+        model_sucursal.SucursalXUsuario.id_usuario == usuario_id,
+        model_sucursal.SucursalXUsuario.id_sucursal.in_(ids_sucursal_de_la_empresa)
+    ).delete(synchronize_session=False)
+
+    if id_rol_nuevo is not None and id_rol_nuevo in ids_rol_asignables:
+        db.add(model_rol.RolXUsuario(id_usuario=usuario_id, id_rol=id_rol_nuevo))
+    for id_sucursal in ids_sucursal_de_la_empresa.intersection(ids_sucursal):
+        db.add(model_sucursal.SucursalXUsuario(id_usuario=usuario_id, id_sucursal=id_sucursal))
 
 
 # Paginacion: solo usuarios asociados (via md_empresaxuser) a la empresa indicada
@@ -137,6 +211,10 @@ def create_usuario(db: Session, obj: esquema_usuario.UsuarioCreate):
     )
     db.add(bd_empresaxuser)
 
+    # 4. Asignar de una vez a sus tablas base (rol/sucursal) - aprovecha el
+    # alta en vez de obligar a ir a Roles/Sucursales por separado despues.
+    _sincronizar_roles_sucursales(db, bd_usuario.id_usuario, obj.id_emp, obj.id_rol, obj.sucursales)
+
     db.commit()
     db.refresh(bd_usuario)
 
@@ -147,7 +225,7 @@ def create_usuario(db: Session, obj: esquema_usuario.UsuarioCreate):
 # ligada (misma logica que proveedores: no se permite reasignar a otra persona desde
 # aqui, solo corregir los datos de la que ya esta ligada). La asociacion a empresa
 # (md_empresaxuser) no se toca aqui, se fija solo al crear.
-def update_usuario(db: Session, usuario_id: int, obj: esquema_usuario.UsuarioCreate):
+def update_usuario(db: Session, usuario_id: int, id_emp: int, obj: esquema_usuario.UsuarioCreate):
     db_query = db.query(model_usuario.Usuario).filter(model_usuario.Usuario.id_usuario == usuario_id)
     db_usuario = db_query.first()
 
@@ -184,6 +262,8 @@ def update_usuario(db: Session, usuario_id: int, obj: esquema_usuario.UsuarioCre
                     "id_ciudad": obj.persona.id_ciudad,
                     "fecha_mod": obj.fecha_mod
                 }, synchronize_session=False)
+
+        _sincronizar_roles_sucursales(db, usuario_id, id_emp, obj.id_rol, obj.sucursales)
 
         db.commit()
         db.refresh(db_usuario)

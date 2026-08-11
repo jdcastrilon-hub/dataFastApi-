@@ -37,6 +37,8 @@ from app.modules.comercial.ventas.controller_ventas import router as ventas
 from app.modules.comercial.mediopago.controller_medio import router as mediopagos
 from app.modules.comercial.cajas.controller_cajas import router as cajas
 from app.modules.comercial.listaprecio.controller_listaprecio import router as listaprecio
+from app.modules.comercial.ajusteprecio.controller_ajusteprecio import router as ajusteprecio
+from app.modules.comercial.cargaprecios.controller_cargaprecios import router as cargaprecios
 from app.modules.comercial.turnos.controller_turno import router as turno
 from app.modules.comercial.cierreturno.controller_cierreturno import router as cierreturno
 from app.modules.comercial.movimientocaja.controller_movcaja import router as movimientocaja
@@ -107,6 +109,8 @@ app.include_router(ventas)
 app.include_router(mediopagos)
 app.include_router(cajas)
 app.include_router(listaprecio)
+app.include_router(ajusteprecio)
+app.include_router(cargaprecios)
 app.include_router(turno)
 app.include_router(cierreturno)
 app.include_router(movimientocaja)

@@ -22,6 +22,13 @@ def obtener_venta(id_trans: int, id_emp: int = 1, db: Session = Depends(get_db),
         raise HTTPException(status_code=404, detail="Venta no encontrada")
     return bd_venta
 
+@router.get("/stock-precio-masivo", response_model=List[schema_ventas.VentaActualizacionDatos])
+def get_stock_precio_masivo(cadena: str, id_bodega: int, id_estado: int, id_lista: int = 0, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
+    """Recalcula stock y precio de varios articulos en una sola consulta - usado
+    cuando cambia bodega/estado/lista de precios con lineas ya cargadas en la grilla."""
+    return repositoty_ventas.consultar_stock_precio_lote(db, cadena, id_bodega, id_estado, id_lista)
+
+
 @router.get("/pagination", response_model=schema_ventas.PaginatedVentaResponse)
 def list_ventas_paginacion(
     page: int = Query(0, ge=0),

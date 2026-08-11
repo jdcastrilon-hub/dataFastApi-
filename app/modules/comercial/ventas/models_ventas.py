@@ -44,6 +44,11 @@ class Factura(Base):
     # manualmente cual caja (de las asociadas al usuario via m_cajasxuser) se uso.
     # Si hay turno abierto, la caja ya se sabe indirectamente via id_turno -> m_cajas.
     id_caja = Column(Integer, nullable=True)
+    # Nullable: ventas anteriores a esta columna (y ventas hechas sin tocar el
+    # selector de lista) no tienen una lista asociada. Solo venta-directa la
+    # expone hoy (ver form-venta-directa) - la resolucion de precio real usa
+    # esto para saber contra que lista de s_precioxarticulo cotizar cada linea.
+    id_lista = Column(Integer, nullable=True)
     fec_venc = Column(Date, nullable=False)
     id_moneda = Column(Integer, nullable=False)
     id_bodega = Column(Integer, nullable=False)

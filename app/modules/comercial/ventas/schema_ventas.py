@@ -33,8 +33,16 @@ class VentaBase(BaseModel):
     # Optional: solo se usa cuando NO hay turno abierto - caja elegida manualmente
     # entre las asociadas al usuario (m_cajasxuser).
     id_caja: Optional[int] = Field(None, alias="idCaja")
-    imp_ingreso: Decimal= Field(alias="impIgreso")
-    imp_vuelto: Decimal= Field(alias="impVuelto")
+    # Optional: solo venta-directa expone el selector hoy (ver
+    # form-venta-directa.component.ts) - resuelve contra que lista de
+    # s_precioxarticulo se cotizo cada linea de esta venta.
+    id_lista: Optional[int] = Field(None, alias="idLista")
+    # Default en 0: el frontend ya envia el valor exacto calculado cuando el
+    # cajero no toca el campo (pago exacto, sin vuelto) - este default es solo
+    # una red de seguridad para no devolver el error generico de validacion si
+    # algun llamador llega a omitirlo.
+    imp_ingreso: Decimal = Field(default=Decimal("0"), alias="impIgreso")
+    imp_vuelto: Decimal = Field(default=Decimal("0"), alias="impVuelto")
     fec_venc : datetime = Field(alias="fecVenc")
     imp_neto : Decimal= Field(alias="impNeto")
     # Optional: nunca estuvo en este schema pese a que la columna real ya existia -
@@ -154,3 +162,16 @@ class BodegaSimple(BaseModel):
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 #Fin Esquemas Auxiliares***********************
+
+
+# Respuesta de ventas_obtener_stock_precio_masivo - recalculo en lote de stock y
+# precio de las lineas ya cargadas en la grilla cuando cambia bodega/estado/lista.
+class VentaActualizacionDatos(BaseModel):
+    idarticulo: int
+    idcodbarra: int
+    stock: int
+    precio: Decimal
+    idimpuesto: int
+    porcentaje: Decimal
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
