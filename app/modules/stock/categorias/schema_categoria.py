@@ -47,7 +47,7 @@ class CategoriaBase(BaseModel):
 
 class SubcategoriaBase(BaseModel):
     id: Optional[int] = Field(alias="id")
-    cod_subcategoria:  str = Field(alias="codSubCategoria", max_length=20)
+    cod_subcategoria: Optional[str] = Field(alias="codSubCategoria", max_length=20, default=None)
     nom_subcategoria:  str = Field(alias="nomSubCategoria", max_length=50)
     tiene_articulos: bool = Field(alias="tieneArticulos")
 
@@ -59,3 +59,16 @@ class SubcategoriaBase(BaseModel):
 # Esquema para crear (lo que recibe el POST)
 class CategoriaCreate(CategoriaBase):
     pass
+
+# --- Combos (usados por selects de otros formularios, ej. Utilidad x Categoria) ---
+class CategoriaCombo(BaseModel):
+    id: int
+    nom_categoria: str = Field(alias="nomCategoria", max_length=50)
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+class SubcategoriaCombo(BaseModel):
+    id: int
+    nom_subcategoria: str = Field(alias="nomSubcategoria", max_length=50)
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)

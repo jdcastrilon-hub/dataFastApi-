@@ -32,7 +32,11 @@ class Factura(Base):
     serie_remito = Column(String(8), nullable=False)
     
     # Información Comercial
-    observacion = Column(String(250), nullable=False)
+    # Nullable: venta-directa la exige en el frontend (Validators.required), pero
+    # venta-pos no - antes la columna era NOT NULL a nivel de BD sin ningun
+    # default, asi que POS no podia guardar sin observacion aunque el formulario
+    # nunca la pidiera.
+    observacion = Column(String(250), nullable=True)
     imp_ingreso = Column(Numeric(14, 2), nullable=False)
     imp_vuelto = Column(Numeric(14, 2), nullable=False)
     # Nullable: solo aplica cuando el usuario tiene un turno/caja POS abierto en el

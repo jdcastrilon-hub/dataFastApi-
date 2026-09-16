@@ -87,7 +87,8 @@ def create_proveedor(db: Session, obj: schema_proveedor.ProveedorCreate):
 
         if(obj.id_persona==0):
             # 1. Crear persona
-            bd_persona = modelo_personas.Persona(            
+            bd_persona = modelo_personas.Persona(
+                id_emp=obj.id_emp,
                 id_tipodoc=obj.persona.id_tipodoc,
                 cod_tit=obj.persona.cod_tit,
                 nombres=obj.persona.nombres,
@@ -114,8 +115,9 @@ def create_proveedor(db: Session, obj: schema_proveedor.ProveedorCreate):
             cod_tit=obj.cod_tit,
             razon_social=obj.razon_social,
             regimen=obj.regimen,
+            responsable_iva=obj.responsable_iva,
             activo=obj.activo,
-            observacion=obj.observacion,
+            observacion=obj.observacion or "",  # la columna es NOT NULL; el frontend puede mandar null
             logs=logs_dict,
             fecha_mod=obj.fecha_mod
         )
@@ -145,8 +147,9 @@ def update_proveedor(db: Session, proveedor_id: int, obj: schema_proveedor.Prove
             "cod_tit": obj.cod_tit,
             "razon_social": obj.razon_social,
             "regimen": obj.regimen,
+            "responsable_iva": obj.responsable_iva,
             "activo": obj.activo,
-            "observacion": obj.observacion,
+            "observacion": obj.observacion or "",  # la columna es NOT NULL; el frontend puede mandar null
             "logs": logs_dict,
             "fecha_mod": obj.fecha_mod
         }, synchronize_session=False)

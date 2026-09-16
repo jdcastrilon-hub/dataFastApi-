@@ -1,5 +1,5 @@
 from sqlalchemy import desc, or_
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from . import model_medio , schema_medio
 from app.modules.comercial.mediopago import model_medio
 
@@ -24,6 +24,7 @@ def get_medios_pago_paginated(db: Session, page: int, size: int, idempresa: int,
 
     offset = page * size
     items = query\
+        .options(joinedload(model_medio.MedioPago.banco))\
         .order_by(desc(model_medio.MedioPago.fecha_mod))\
         .offset(offset)\
         .limit(size)\
@@ -41,7 +42,9 @@ def get_medios_pago_paginated(db: Session, page: int, size: int, idempresa: int,
 
 # Obtener un medio de pago por ID
 def get_medio_pago_by_id(db: Session, id: int):
-    return db.query(model_medio.MedioPago).filter(model_medio.MedioPago.id == id).first()
+    return db.query(model_medio.MedioPago).filter(model_medio.MedioPago.id == id).options(
+        joinedload(model_medio.MedioPago.banco)
+    ).first()
 
 # Crear un medio de pago
 def create_medio_pago(db: Session, obj: schema_medio.MedioPagoCreate):
@@ -49,6 +52,7 @@ def create_medio_pago(db: Session, obj: schema_medio.MedioPagoCreate):
         id_emp=obj.id_emp,
         tipo=obj.tipo,
         orden=obj.orden,
+        id_banco=obj.id_banco,
         logs=_limitar_logs([log.model_dump() for log in obj.logs] if obj.logs else []),
         fecha_mod=obj.fecha_mod
     )
@@ -65,6 +69,7 @@ def update_medio_pago(db: Session, id: int, obj: schema_medio.MedioPagoCreate):
 
     db_medio.tipo = obj.tipo
     db_medio.orden = obj.orden
+    db_medio.id_banco = obj.id_banco
     db_medio.logs = _limitar_logs([log.model_dump() for log in obj.logs] if obj.logs else [])
     db_medio.fecha_mod = obj.fecha_mod
 

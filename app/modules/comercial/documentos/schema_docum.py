@@ -16,7 +16,11 @@ class MDocumVentasBase(BaseModel):
     descripcion: str = Field(alias="descripcion", max_length=50)
     serie_docum: str = Field(alias="serie", max_length=8)
     clase_docum: str = Field(alias="clase", max_length=50)
-    secuencia: str = Field(alias="secuencia", max_length=50)
+    # El backend siempre la recalcula (documento-codSucursal, ver
+    # repository_docum.py::_calcular_secuencia) - se ignora lo que mande el
+    # cliente, por eso es opcional aqui (el frontend la manda deshabilitada,
+    # que JSON.stringify puede omitir del todo).
+    secuencia: Optional[str] = Field(alias="secuencia", max_length=50, default=None)
     aplica_pos: str = Field(alias="aplicaPos", max_length=2)
     activo: str = Field(alias="activo", max_length=2)
     fecha_mod: Optional[datetime] = Field(alias="fechaMod", default=None)

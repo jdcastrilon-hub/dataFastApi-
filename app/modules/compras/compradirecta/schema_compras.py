@@ -23,7 +23,11 @@ class CompraBase(BaseModel):
     status: str = Field(alias="status", max_length=2)
     ingresa_bodega: str = Field(alias="ingresaBodega", max_length=2)
     id_bodega: int = Field(alias="idBodega")
-    id_estado: int= Field(alias="idEstado")
+    # Optional: al crear, el backend lo resuelve desde m_confcompras.id_estado_comp
+    # (ver crear_compra en controller_compras.py) e ignora lo que mande el cliente -
+    # el usuario ya no elige el estado de la mercancia en el formulario. En
+    # edicion se mantiene el valor historico ya guardado.
+    id_estado: Optional[int] = Field(None, alias="idEstado")
     imp_neto : Decimal= Field(alias="impNeto")
     imp_descuento : Decimal= Field(alias="impDescuento")
     imp_total : Decimal= Field(alias="impTotal")
@@ -58,6 +62,10 @@ class DetalleCompra(BaseModel):
     id_codbarra: int = Field(alias="idCodBarra") 
     ref_compras:str = Field(alias="refCompras", max_length=100)
     costo_unit: Decimal= Field(alias="costoUnit")
+    # Precio de venta digitado en la compra (opcional por linea). El backend lo
+    # ignora (fuerza 0) si la empresa no activo m_confcompras.act_precio_compra
+    # - ver controller_compras.py::crear_compra. 0 = "sin precio para esta linea".
+    imp_precio_vta: Decimal = Field(Decimal("0"), alias="impPrecioVta")
     cantidad: int = Field(alias="cantidad")
     id_lote: int = Field(alias="idLote")
     stock: int = Field(alias="stock")

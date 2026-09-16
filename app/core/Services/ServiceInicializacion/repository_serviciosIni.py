@@ -28,7 +28,8 @@ def get_compra_disponible(db: Session, id_articulo: int,id_codbarra: int, bodega
                 s.stock AS "stock",
                 s.costo AS "costo",
                 s.impuesto AS "impuesto",
-                s.porcentaje AS "porcentaje"
+                s.porcentaje AS "porcentaje",
+                s.porc_utilidad AS "porc_utilidad"
             FROM comprasdisponiblexbodega(:param_articulo_id, :param_id_codbarra, :param_bodega_id, :param_estado_id, :param_id_proveedor) AS s
         """)
 

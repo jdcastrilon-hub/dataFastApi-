@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -55,6 +55,8 @@ class MovimientoStock(BaseModel):
     tipo_movimiento: str = Field(alias="tipo_movimiento")
     cantidad: int = Field(alias="cantidad")
     vista: str = Field(alias="vista")
+    fecha_mod: Optional[datetime] = Field(default=None, alias="fecha_mod")
+    usuario_mod: Optional[str] = Field(default=None, alias="usuario_mod")
 
     model_config = ConfigDict(
         from_attributes=True,

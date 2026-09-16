@@ -130,9 +130,10 @@ def create_trasladobodega(db: Session, obj: schema_trasladoStock.TrasladoStockCr
 
         # 3. LLAMAR AL STORED PROCEDURE (Antes del commit)
         # Usamos el ID que acabamos de generar
+        usuario_mod = logs_dict[-1].get('usuario_mod') if logs_dict else None
         db.execute(
-            text("CALL public.sp_stock_impacto_trasladobodega(:operacion,:parm_trans)"),
-            {"operacion": "N", "parm_trans": bd_cabecera.id_trans}
+            text("CALL public.sp_stock_impacto_trasladobodega(:operacion,:parm_trans,:usuario)"),
+            {"operacion": "N", "parm_trans": bd_cabecera.id_trans, "usuario": usuario_mod}
         )
 
         # 4. Control de transaccion: punto unico de validacion (hoy solo controla
@@ -197,9 +198,10 @@ def update_trasladobodega(db: Session, id_trans: int, obj: schema_trasladoStock.
 
         # 3. Volvemos a llamar al SP: borra e inserta de nuevo el impacto en p_stock
         # (baja en origen + alta en destino) a partir de la cabecera/detalle actualizados.
+        usuario_mod = bd_cabecera.logs[-1].get('usuario_mod') if bd_cabecera.logs else None
         db.execute(
-            text("CALL public.sp_stock_impacto_trasladobodega(:operacion,:parm_trans)"),
-            {"operacion": "E", "parm_trans": id_trans}
+            text("CALL public.sp_stock_impacto_trasladobodega(:operacion,:parm_trans,:usuario)"),
+            {"operacion": "E", "parm_trans": id_trans, "usuario": usuario_mod}
         )
 
         # 4. Control de transaccion (ver nota en create_trasladobodega)

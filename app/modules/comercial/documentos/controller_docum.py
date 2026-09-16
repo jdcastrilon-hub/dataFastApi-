@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query,status
 from fastapi.responses import JSONResponse
 from datetime import date
+from typing import List
 from sqlalchemy.orm import Session
 from app.database import get_db
 from . import schema_docum, repository_docum
@@ -11,6 +12,19 @@ from app.core.auth import security
 router = APIRouter(
     prefix="/comercial/documentos",
     tags=["comercial - documentos"])
+
+@router.get("/listCombo", response_model=List[schema_docum.DocumentCombo])
+def listar_documentos_combo(
+    id_emp: int,
+    id_sucursal_emp: int,
+    clase: str,
+    db: Session = Depends(get_db),
+    usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
+    """Documentos activos de una sucursal filtrados por clase (ej. 'NotaCredito'),
+    para el select de "Documento" de otros modulos transaccionales (nota credito,
+    futura nota debito) - distinto del combo de venta-directa/POS, que ya viene
+    fijo a clase='Factura' (ver repository_sucursal.get_sucursales_by_bodegas)."""
+    return repository_docum.get_documentos_combo(db, id_emp=id_emp, id_sucursal_emp=id_sucursal_emp, clase=clase)
 
 @router.get("/pagination", response_model=schema_docum.PaginatedDocumVentasResponse)
 def list_documentos_paginacion(

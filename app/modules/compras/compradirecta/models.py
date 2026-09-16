@@ -73,6 +73,10 @@ class DetalleCompra(Base):
     
     # Precios y Costos (Numeric para precisión financiera)
     costo_unit = Column(Numeric(14, 2), nullable=False)
+    # Precio de venta digitado en la compra (opcional por linea, condicionado a
+    # m_confcompras.act_precio_compra). 0 = sentinela "sin precio definido" -
+    # sp_compradirecta solo impacta p_precios cuando es > 0.
+    imp_precio_vta = Column(Numeric(14, 2), nullable=False, default=0)
     cantidad = Column(Integer, nullable=False)
     id_lote = Column(Integer, nullable=False)
     stock = Column(Integer, nullable=False)

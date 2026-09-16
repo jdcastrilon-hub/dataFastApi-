@@ -51,7 +51,7 @@ class VentaBase(BaseModel):
     porc_dcto : Decimal= Field(alias="porcDescuento")
     imp_descuento : Decimal= Field(alias="impDescuento")
     imp_total : Decimal= Field(alias="impTotal")
-    observacion: Optional[str] = Field(alias="observaciones", max_length=250)
+    observacion: Optional[str] = Field(None, alias="observaciones", max_length=250)
     impuesto1 : str = Field(alias="impuesto1", max_length=6)
     valor_impuesto1 : Decimal= Field(alias="valorImpuesto1")
     impuesto2 : str = Field(alias="impuesto2", max_length=6)

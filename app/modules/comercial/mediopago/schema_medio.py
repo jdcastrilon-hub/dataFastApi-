@@ -8,11 +8,23 @@ class LogEntry(BaseModel):
     usuario_mod: str
     fecha_mod: str
 
+# Solo aplica para lectura (join hacia m_banco) - se ignora al guardar, lo que
+# manda el formulario es id_banco.
+class BancoSimple(BaseModel):
+    nom_banco: str = Field(alias="nomBanco", max_length=100)
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
 class MedioPagoBase(BaseModel):
     id: Optional[int] = Field(None, alias="id")
     id_emp: int = Field(alias="idEmp")
     tipo: str = Field(alias="tipo", max_length=20)
     orden: Optional[int] = Field(None, alias="orden")
+    # Nullable: solo los medios de pago que liquidan en una cuenta bancaria fija
+    # (Transferencia, Tarjeta) llevan banco. Efectivo queda en None porque el
+    # destino del dinero ya se resuelve por la caja de la venta.
+    id_banco: Optional[int] = Field(None, alias="idBanco")
+    banco: Optional[BancoSimple] = None
     fecha_mod: Optional[datetime] = Field(alias="fechaMod", default=None)
     # Optional porque hay filas preexistentes en m_mediopagos con logs=NULL (creadas
     # antes de que este CRUD existiera) - una lista requerida rompe el GET /search
@@ -35,6 +47,18 @@ class MedioPagoCombo(BaseModel):
     from_attributes=True,
     populate_by_name=True)
 
+class MedioPagoPaginacion(BaseModel):
+    id: int
+    tipo: str = Field(alias="tipo", max_length=20)
+    orden: Optional[int] = Field(None, alias="orden")
+    banco: Optional[BancoSimple] = None
+    fecha_mod: Optional[datetime] = Field(alias="fechaMod", default=None)
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True
+    )
+
 # Esquema para paginacion
 class PaginatedMedioPagoResponse(BaseModel):
     content: List[MedioPagoPaginacion]
@@ -42,14 +66,3 @@ class PaginatedMedioPagoResponse(BaseModel):
     totalPages: int
     number: int
     size: int
-
-class MedioPagoPaginacion(BaseModel):
-    id: int
-    tipo: str = Field(alias="tipo", max_length=20)
-    orden: Optional[int] = Field(None, alias="orden")
-    fecha_mod: Optional[datetime] = Field(alias="fechaMod", default=None)
-
-    model_config = ConfigDict(
-        from_attributes=True,
-        populate_by_name=True
-    )

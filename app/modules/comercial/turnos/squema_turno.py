@@ -13,11 +13,11 @@ class LogEntry(BaseModel):
 class TurnoBase(BaseModel):
     id : Optional[int] = Field(None,alias="id") 
     id_caja : int = Field(alias="idCaja")
-    fec_doc: datetime = Field(alias="Fecha")
+    fec_doc: datetime = Field(alias="fecha")
     status: bool = Field(alias="status")
     imp_base :  Decimal= Field(alias="impBase")
     usuario :  str = Field(alias="usuario", max_length=16)
-    observacion : str = Field(alias="Observacion", max_length=100)
+    observacion : str = Field(alias="observacion", max_length=100)
     fecha_mod: Optional[datetime] = Field(alias="fechaMod",default=None)
     logs: List[LogEntry]
     caja: Optional[CajaSimple] = None  #Solo aplica para la edicion del turno.

@@ -69,10 +69,13 @@ def get_sucursales_by_bodegas(db: Session, id_empresa: int):
     # 2. Mapeamos directamente
     resultado = []
     for sucursal in sucursales:
-        #Documentos de la empresa y sucursal
+        # Documentos de la empresa y sucursal - solo clase 'Factura': este combo
+        # alimenta el selector "Documento" de factura directa/POS, no debe traer
+        # otras clases (ej. futura "NotaCredito") que vivan en la misma tabla.
         documentos = db.query(model_docum.DocumentoVenta)\
         .filter(model_docum.DocumentoVenta.id_emp == id_empresa,
-                model_docum.DocumentoVenta.id_sucursal_emp == sucursal.id)\
+                model_docum.DocumentoVenta.id_sucursal_emp == sucursal.id,
+                model_docum.DocumentoVenta.clase_docum == 'Factura')\
         .all()
 
         

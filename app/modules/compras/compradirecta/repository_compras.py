@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session , joinedload
 from app.exceptions import TransaccionValidationError
 from app.modules.compras.proveedores import model_proveedor
 from app.core.numeradores import repository_numerador
+from app.core.configuracion.validador import requerir_configurado
 from . import models, schema_compras
 
 # Codigo del numerador (por empresa) que identifica el consecutivo de nroDocum
@@ -18,6 +19,26 @@ def _siguiente_nro_docum(db: Session, id_emp: int, nro_docum_manual):
     en False, respeta lo enviado desde el formulario."""
     siguiente = repository_numerador.siguiente_numerador(db, id_emp, CODIGO_NUMERADOR_COMPRA)
     return siguiente if siguiente is not None else nro_docum_manual
+
+# Resuelve la lista general (m_listaprecio.es_general=true, activo=true) para
+# impactar p_precios - mismo criterio ya usado en Carga de Stock
+# (repository_cargastock.py). Solo se molesta en buscarla si de verdad hace
+# falta (alguna linea trae imp_precio_vta>0); si ninguna linea tiene precio,
+# no tiene sentido bloquear la compra por una lista que ni se va a usar.
+def _resolver_lista_general_si_aplica(db: Session, id_emp: int, detalles: list) -> int | None:
+    hay_precio_venta = any((det.imp_precio_vta or 0) > 0 for det in detalles)
+    if not hay_precio_venta:
+        return None
+
+    id_lista_general = db.execute(
+        text("SELECT id_lista FROM m_listaprecio WHERE id_emp = :id_emp AND es_general = true AND activo = true"),
+        {"id_emp": id_emp}
+    ).scalar()
+    return requerir_configurado(
+        id_lista_general,
+        "La empresa no tiene una lista de precios general activa; configúrela en "
+        "Comercial > Listas de Precio antes de registrar precios de venta en la compra."
+    )
 
 #Paginacion (filtrada por empresa)
 def get_compras_paginated(db: Session, page: int, size: int, id_emp: int, texto: str = None):
@@ -154,9 +175,10 @@ def create_compra(db: Session, obj: schema_compras.CompraCreate) :
             # 3. LLAMAR AL STORED PROCEDURE (Antes del commit)
             # Usamos el ID que acabamos de generar
             usuario_mod = logs_dict[-1].get('usuario_mod') if logs_dict else None
+            id_lista_general = _resolver_lista_general_si_aplica(db, obj.id_emp, obj.detalles)
             db.execute(
-                text("CALL public.sp_compradirecta(:operacion,:parm_trans,:usuario)"),
-                {"operacion": "N", "parm_trans": bd_compra.id_trans, "usuario": usuario_mod}
+                text("CALL public.sp_compradirecta(:operacion,:parm_trans,:usuario,:id_lista)"),
+                {"operacion": "N", "parm_trans": bd_compra.id_trans, "usuario": usuario_mod, "id_lista": id_lista_general}
             )
 
             #Control de transaccion
@@ -169,6 +191,12 @@ def create_compra(db: Session, obj: schema_compras.CompraCreate) :
         db.refresh(bd_compra)
         return bd_compra
 
+    except HTTPException:
+        # Ej. "falta configurar la lista de precios general" (requerir_configurado
+        # en _resolver_lista_general_si_aplica): se deja pasar tal cual, no se
+        # reenvuelve como TransaccionValidationError (que asume un e.orig de SP/BD).
+        db.rollback()
+        raise
     except (IntegrityError, DataError):
         # No se envuelve: se deja que el manejador global responda con el mensaje
         # amigable específico (ej. remito duplicado para el mismo proveedor/empresa,
@@ -225,9 +253,10 @@ def update_compra(db: Session, id_trans: int, obj: schema_compras.CompraCreate):
         if obj.status == 'F':
             # Llamamos al SP con operación 'E' (Edit) o la que maneje tu lógica de Matrix
             usuario_mod = bd_compra.logs[-1].get('usuario_mod') if bd_compra.logs else None
+            id_lista_general = _resolver_lista_general_si_aplica(db, bd_compra.id_emp, obj.detalles)
             db.execute(
-                text("CALL public.sp_compradirecta(:operacion, :parm_trans, :usuario)"),
-                {"operacion": "N", "parm_trans": id_trans, "usuario": usuario_mod}
+                text("CALL public.sp_compradirecta(:operacion, :parm_trans, :usuario, :id_lista)"),
+                {"operacion": "N", "parm_trans": id_trans, "usuario": usuario_mod, "id_lista": id_lista_general}
             )
         
         db.commit()
@@ -260,6 +289,12 @@ def delete_compra(db: Session, id_trans: int):
     try:
         db.execute(text("DELETE FROM public.p_stock WHERE id_trans=:parm_trans"), {"parm_trans": id_trans})
         db.execute(text("DELETE FROM public.p_costos WHERE id_trans=:parm_trans"), {"parm_trans": id_trans})
+        # p_precios no tiene trigger de DELETE (a diferencia de p_costos): borrar
+        # estas filas limpia el historial de esta transaccion, pero NO revierte
+        # el precio actual del articulo en s_precioxarticulo - decision explicita,
+        # ver migracion 9f2c6a1e4d78 (para cuando se borra la compra ya pudo haber
+        # ventas reales con el precio nuevo).
+        db.execute(text("DELETE FROM public.p_precios WHERE id_trans=:parm_trans"), {"parm_trans": id_trans})
 
         db.delete(bd_compra)  # cascade borra detalles (td_compras) y nuevoCodigoBarra (td_comprasnewcodbarra)
         db.commit()
@@ -282,6 +317,7 @@ def _procesar_detalles_y_codigos(db: Session, id_trans: int, obj: schema_compras
                 id_codbarra  = det.id_codbarra,
                 ref_compras = det.ref_compras,
                 costo_unit = det.costo_unit,
+                imp_precio_vta = det.imp_precio_vta,
                 cantidad  = det.cantidad,
                 id_lote = det.id_lote,
                 stock = det.stock,

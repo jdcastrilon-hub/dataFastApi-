@@ -32,6 +32,8 @@ from app.modules.compras.monitorcompras.controller_monitor import router as moni
 from app.modules.compras.ajustecostos.controller_ajustecosto import router as ajusteCostos
 from app.modules.compras.motivosdevolucion.controller_motivodevolucion import router as motivosdevolucion
 from app.modules.compras.devolucioncompras.controller_devolucion import router as devolucioncompras
+from app.modules.compras.confcompras.controller_confcompras import router as confcompras
+from app.modules.compras.categoriasxutilidad.controller_categoriaxutilidad import router as categoriasxutilidad
 from app.modules.comercial.clientes.controller_cliente import router as cliente
 from app.modules.comercial.ventas.controller_ventas import router as ventas
 from app.modules.comercial.mediopago.controller_medio import router as mediopagos
@@ -45,6 +47,14 @@ from app.modules.comercial.movimientocaja.controller_movcaja import router as mo
 from app.modules.comercial.documentos.controller_docum import router as documventas
 from app.modules.comercial.monitoroperaciones.controller_monitor import router as monitoroperaciones
 from app.modules.tesoreria.conceptos.controller_conceptos import router as conceptos
+from app.modules.tesoreria.catalogos.bancos.controller_banco import router as bancos
+from app.modules.tesoreria.monitor.controller_monitor import router as monitortesoreria
+from app.modules.tesoreria.catalogos.periodicidad.controller_periodicidad import router as periodicidad
+from app.modules.tesoreria.catalogos.formulaprestamo.controller_formulaprestamo import router as formulaprestamo
+from app.modules.tesoreria.confprestamo.controller_confprestamo import router as confprestamo
+from app.modules.comercial.confcomercial.controller_confcomercial import router as confcomercial
+from app.modules.comercial.devolucionventas.controller_devolucionventa import router as devolucionventas
+from app.modules.comercial.motivosdevolucionventa.controller_motivodevolucionventa import router as motivosdevolucionventa
 from app.core.numeradores.controller_numerador import router as numeradores
 from app.core.Services.ServiceInicializacion.controller_serviciosIni import router as serviciosini
 from app.core.auth.controller_auth import router as inicioSesion
@@ -117,6 +127,16 @@ app.include_router(movimientocaja)
 app.include_router(documventas)
 app.include_router(monitoroperaciones)
 app.include_router(conceptos)
+app.include_router(bancos)
+app.include_router(monitortesoreria)
+app.include_router(periodicidad)
+app.include_router(formulaprestamo)
+app.include_router(confprestamo)
+app.include_router(confcomercial)
+app.include_router(confcompras)
+app.include_router(categoriasxutilidad)
+app.include_router(devolucionventas)
+app.include_router(motivosdevolucionventa)
 app.include_router(numeradores)
 app.include_router(menus)
 app.include_router(usuarios)

@@ -6,6 +6,8 @@ from . import repository_compras, schema_compras
 from app.modules.core.usuarios import model_usuario
 from app.core.auth import security
 from app.core.auth.permisos import verificar_permiso
+from app.core.configuracion.validador import requerir_configurado
+from app.modules.compras.confcompras import repository_confcompras
 
 # Codigo del formulario en md_menu (matriz de permisos)
 MENU_CODIGO = "COM_COMPRA"
@@ -13,6 +15,23 @@ MENU_CODIGO = "COM_COMPRA"
 router = APIRouter(
     prefix="/compras/compradirecta",
     tags=["Compras - Proveedor"])
+
+
+# Precio de venta por linea: si la empresa no activo m_confcompras.act_precio_compra,
+# se ignora cualquier valor que mande el cliente (mismo criterio que id_emp/id_estado
+# mas abajo). Si esta activo, valida que ningun precio > 0 quede por debajo de su
+# propio costo - el frontend ya valida esto mismo (feedback inmediato), esto es la
+# defensa del lado del servidor para que un request directo no se salte la regla.
+def _validar_y_ajustar_precio_venta(compra: schema_compras.CompraCreate, conf) -> None:
+    usar_precio_venta = bool(conf and conf.act_precio_compra)
+    for det in compra.detalles:
+        if not usar_precio_venta:
+            det.imp_precio_vta = 0
+        elif det.imp_precio_vta and det.imp_precio_vta > 0 and det.imp_precio_vta < det.costo_unit:
+            raise HTTPException(
+                status_code=400,
+                detail=f"El precio de venta de '{det.ref_compras}' no puede ser menor al costo (${det.costo_unit})."
+            )
 
 #Buscar Compras por ID
 @router.get("/search", response_model=schema_compras.CompraBase)
@@ -40,6 +59,18 @@ def crear_compra(compra: schema_compras.CompraCreate, db: Session = Depends(get_
     con un mensaje amigable, en una sola llamada."""
     compra.id_emp = contexto.id_emp  # ignora el id_emp que mande el cliente en el body
     verificar_permiso(db, contexto.usuario.id_usuario, contexto.id_emp, MENU_CODIGO, "CREAR")
+
+    # El estado de la mercancia ya no lo elige el usuario: se toma del valor
+    # configurado en Compras > Configuracion (m_confcompras.id_estado_comp),
+    # ignorando lo que mande el cliente en el body.
+    conf = repository_confcompras.get_confcompras(db, contexto.id_emp)
+    compra.id_estado = requerir_configurado(
+        conf.id_estado_comp if conf else None,
+        "Falta configurar el estado de mercancía por defecto en Compras > "
+        "Configuración antes de registrar una compra."
+    )
+    _validar_y_ajustar_precio_venta(compra, conf)
+
     repository_compras.create_compra(db=db, obj=compra)
     return {
         "status": "success",
@@ -59,6 +90,12 @@ def actualizar_compra(id_trans: int,compra: schema_compras.CompraCreate, db: Ses
     verificar_permiso(db, contexto.usuario.id_usuario, contexto.id_emp, MENU_CODIGO, "EDITAR")
 
     compra.id_emp = contexto.id_emp  # ignora el id_emp que mande el cliente en el body
+    # El estado (id_estado) NO se toca en edicion: se conserva el valor historico
+    # que ya trae la compra (ver ModoEdicion en el frontend), a diferencia de
+    # crear_compra que lo resuelve de cero desde la configuracion.
+    conf = repository_confcompras.get_confcompras(db, contexto.id_emp)
+    _validar_y_ajustar_precio_venta(compra, conf)
+
     repository_compras.update_compra(db=db,id_trans=id_trans, obj=compra)
     return {
         "status": "success",

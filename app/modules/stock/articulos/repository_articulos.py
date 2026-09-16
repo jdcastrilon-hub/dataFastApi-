@@ -39,6 +39,14 @@ def _obtener_cod_articulo(db: Session, negocio, cod_articulo_manual):
 def get_articulo(db: Session, id_articulo: int):
     return db.query(model_articulos.Articulo).filter(model_articulos.Articulo.id_articulo == id_articulo).options(joinedload(model_articulos.Articulo.objnegocio)).first()
 
+# Usado por Compra Directa (y cualquier grilla similar) para decidir si vale la
+# pena mostrar la columna "Lote" - no existe un flag de "la empresa maneja
+# lotes", se deriva de si al menos un articulo del catalogo lo maneja.
+def existe_articulo_con_lote(db: Session, id_emp: int) -> bool:
+    return db.query(model_articulos.Articulo.id_articulo)\
+        .filter(model_articulos.Articulo.id_emp == id_emp, model_articulos.Articulo.maneja_lote == True)\
+        .first() is not None
+
 def find_codigoBarra_by_query(db: Session, query: str):
         # Creamos el patrón para el LIKE: %query%
         search_filter = f"%{query}%"

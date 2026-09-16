@@ -29,3 +29,19 @@ class PersonaSearch(BaseModel):
 
     class Config:
         from_attributes = True
+
+# Fila de la tabla en el modal "Seleccionar persona"
+class PersonaPaginacion(BaseModel):
+    id_persona: int = Field(alias="idPersona")
+    cod_tit: str = Field(alias="codTit", max_length=50)
+    nombre_completo: str = Field(alias="nombreCompleto", max_length=120)
+    fecha_mod: Optional[datetime] = Field(alias="fechaMod", default=None)
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+class PaginatedPersonaResponse(BaseModel):
+    content: list[PersonaPaginacion]
+    totalElements: int
+    totalPages: int
+    number: int
+    size: int

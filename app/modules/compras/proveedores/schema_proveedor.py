@@ -16,8 +16,9 @@ class ProveedorBase(BaseModel):
     cod_tit: str = Field(alias="codigoTitular", max_length=50)
     razon_social: str = Field(alias="razonSocial", max_length=150)
     regimen: str = Field(alias="regimen", max_length=20)
+    responsable_iva: bool = Field(alias="responsableIva")
     activo: bool = Field(alias="activo")
-    observacion: str = Field(alias="observacion", max_length=250)
+    observacion: Optional[str] = Field(default="", alias="observacion", max_length=250)
     fecha_mod: Optional[datetime] = Field(alias="fechaMod",default=None)
     logs: List[LogEntry]
     persona:  PersonaBase= Field(default=[], alias="persona")
@@ -32,7 +33,8 @@ class PersonaBase(BaseModel):
     nombres: str = Field(alias="nombres", max_length=60)
     apellidos: str = Field(alias="apellidos", max_length=60)
     nombre_completo:  str = Field(alias="nombreCompleto", max_length=120)
-    sexo: str = Field(alias="sexo", max_length=2)
+    # Optional: una persona juridica no tiene sexo (el formulario ya no lo pide en ese caso).
+    sexo: Optional[str] = Field(None, alias="sexo", max_length=2)
     fec_nacimiento: Optional[date] = Field(None, alias="fechaNacimiento")
     direccion:  str = Field(alias="direccion", max_length=50)
     telefono:  str = Field(alias="telefono", max_length=60)
@@ -56,6 +58,7 @@ class ProveedorResponse(BaseModel):
     cod_tit: str = Field(alias="codigoTitular", max_length=50)
     razon_social: str = Field(alias="razonSocial", max_length=150)
     regimen: str = Field(alias="regimen", max_length=20)
+    responsable_iva: bool = Field(alias="responsableIva")
     activo: bool = Field(alias="activo")
     observacion: str = Field(alias="observacion", max_length=250)
     fecha_mod: Optional[datetime] = Field(alias="fechaMod", default=None)

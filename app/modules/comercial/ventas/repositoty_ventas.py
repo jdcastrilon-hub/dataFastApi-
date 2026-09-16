@@ -140,10 +140,11 @@ def create_venta(db: Session, obj: schema_ventas.ventaCreate, nro_docum : int) :
         _procesar_detalles_pago(db, bd_venta.id_trans, bd_venta.id_emp, obj)
         db.flush() # Envio a base de datos
 
+        usuario_mod = logs_dict[-1].get('usuario_mod') if logs_dict else None
         db.execute(
-                text("CALL public.sp_comercial_ventapos(:operacion,:parm_trans)"), 
-                {"operacion": "N", "parm_trans": bd_venta.id_trans}
-            ) 
+                text("CALL public.sp_comercial_ventapos(:operacion,:parm_trans,:usuario)"),
+                {"operacion": "N", "parm_trans": bd_venta.id_trans, "usuario": usuario_mod}
+            )
 
         #Control de transaccion
         db.execute(
@@ -225,9 +226,10 @@ def update_venta(db: Session, id_trans: int, id_emp: int, obj: schema_ventas.ven
         _procesar_detalles_pago(db, id_trans, id_emp, obj)
         db.flush()
 
+        usuario_mod = bd_venta.logs[-1].get('usuario_mod') if bd_venta.logs else None
         db.execute(
-            text("CALL public.sp_comercial_ventapos(:operacion,:parm_trans)"),
-            {"operacion": "N", "parm_trans": id_trans}
+            text("CALL public.sp_comercial_ventapos(:operacion,:parm_trans,:usuario)"),
+            {"operacion": "N", "parm_trans": id_trans, "usuario": usuario_mod}
         )
         db.execute(
             text("CALL public.sp_general_control_transacciones(:parm_trans)"),
@@ -278,7 +280,7 @@ def _procesar_detalles(db: Session, id_trans: int,id_emp: str, obj: schema_venta
                 impuesto3 = det.impuesto3,
                 id_tasaimp3 = det.id_tasaimp3,
                 valor_impuesto3 = det.valor_impuesto3,
-                imp_neto=obj.imp_neto,
+                imp_neto=det.imp_neto,
                 imp_total = det.imp_total
             )
             db.add(de_detalles)

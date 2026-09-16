@@ -80,6 +80,7 @@ def create_cliente(db: Session, obj: schema_cliente.ClienteCreate):
         if not obj.id_persona:
             # 1. Crear persona
             bd_persona = modelo_personas.Persona(
+                id_emp=obj.id_emp,
                 id_tipodoc=obj.persona.id_tipodoc,
                 cod_tit=obj.persona.cod_tit,
                 nombres=obj.persona.nombres,

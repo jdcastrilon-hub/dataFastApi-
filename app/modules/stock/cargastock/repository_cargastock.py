@@ -725,8 +725,8 @@ def procesar_carga_stock(
 
         # Impacta p_stock/p_costos (costo directo del Excel, sin promediar)
         db.execute(
-            text("CALL public.sp_stock_impacto_cargastock(:operacion, :parm_trans)"),
-            {"operacion": "N", "parm_trans": bd_cabecera.id_trans}
+            text("CALL public.sp_stock_impacto_cargastock(:operacion, :parm_trans, :usuario)"),
+            {"operacion": "N", "parm_trans": bd_cabecera.id_trans, "usuario": usuario_nombre}
         )
 
         db.commit()

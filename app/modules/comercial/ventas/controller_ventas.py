@@ -56,7 +56,7 @@ def create_venta_directa(bd_factura: schema_ventas.ventaCreate, db: Session = De
     return {
             "status": "success",
             "message": "Factura creada exitosamente",
-            "data": None  # Omites el objeto completo para ahorrar recursos
+            "data": bd_factura  # Omites el objeto completo para ahorrar recursos
     }
 
 @router.put("/edit/{id_trans}")

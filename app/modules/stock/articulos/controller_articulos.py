@@ -26,6 +26,13 @@ def list_bodegas_paginacion(
     contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)):
     return repository_articulos.get_articulos_paginated(db, page, size, contexto.id_emp, texto)
 
+@router.get("/manejaLotes", response_model=bool)
+def existe_articulo_con_lote(db: Session = Depends(get_db), contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)):
+    """Indica si al menos un articulo del catalogo de la empresa activa maneja lote -
+    usado para decidir si vale la pena mostrar la columna "Lote" en grillas de detalle
+    (Compra Directa, etc.)."""
+    return repository_articulos.existe_articulo_con_lote(db, contexto.id_emp)
+
 @router.get("/search", response_model=schema_articulos.ArticulosBase)
 def obtener_bodega(id_articulo: int, db: Session = Depends(get_db), usuario_autenticado: model_usuario.Usuario = Depends(security.obtener_usuario_actual)):
     """Busca un articulo específico x ID."""

@@ -1,15 +1,21 @@
-from sqlalchemy import Column, Integer, Sequence, String, Date, DateTime, JSON, ForeignKey
+from sqlalchemy import Column, Integer, Sequence, String, Date, DateTime, JSON, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from app.database import Base
 import datetime
 
 class Persona(Base):
     __tablename__ = "m_personas"
-    __table_args__ = {"schema": "public"}
+    __table_args__ = (
+        UniqueConstraint('id_emp', 'cod_tit', name='m_personas_uniq'),
+        {"schema": "public"}
+    )
 
     id_persona = Column(Integer,Sequence('m_personas_id_persona_seq'), primary_key=True, index=True)
+    # Empresa que creo esta persona (desde Proveedor, Cliente o Usuario) - cada
+    # empresa maneja su propio directorio de personas, independiente de las demas.
+    id_emp = Column(Integer, ForeignKey("public.md_empresas.id_emp"), nullable=False)
     id_tipodoc = Column(Integer, ForeignKey("public.m_tipodocumentos.id"), nullable=False)
-    cod_tit = Column(String(50), unique=True, nullable=False)
+    cod_tit = Column(String(50), nullable=False)
     nombres = Column(String(60), nullable=False)
     apellidos = Column(String(60), nullable=False)
     nombre_completo = Column(String(120), nullable=False)

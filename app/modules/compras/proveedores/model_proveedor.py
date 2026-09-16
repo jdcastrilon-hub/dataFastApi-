@@ -13,6 +13,7 @@ class Proveedor(Base):
     cod_tit = Column(String(50), unique=True, nullable=False)
     razon_social = Column(String(150), nullable=False)
     regimen = Column(String(20), nullable=False)
+    responsable_iva = Column(Boolean, nullable=False)
     activo = Column(Boolean, nullable=False)
     observacion = Column(String(250), nullable=False)
     logs = Column(JSON, nullable=True)

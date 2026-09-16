@@ -14,6 +14,16 @@ router = APIRouter(
     prefix="/bodega/categorias",
     tags=["Stock - Categorias"])
 
+@router.get("/listCombo", response_model=list[schema_categoria.CategoriaCombo])
+def listar_categorias_combo(db: Session = Depends(get_db), contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)):
+    """Combo de categorias activas de la empresa (usado por Utilidad x Categoria)."""
+    return repository_categoria.get_categorias_combo(db, contexto.id_emp)
+
+@router.get("/{id_categoria}/subcategorias/listCombo", response_model=list[schema_categoria.SubcategoriaCombo])
+def listar_subcategorias_combo(id_categoria: int, db: Session = Depends(get_db), contexto: security.ContextoUsuario = Depends(security.obtener_contexto_actual)):
+    """Combo de subcategorias de una categoria puntual (cascada del combo anterior)."""
+    return repository_categoria.get_subcategorias_combo(db, id_categoria, contexto.id_emp)
+
 @router.get("/pagination", response_model=schema_categoria.PaginatedBodegaResponse)
 def list_categorias_paginacion(
     page: int = Query(0, ge=0),

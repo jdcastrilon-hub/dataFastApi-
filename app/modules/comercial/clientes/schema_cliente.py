@@ -16,7 +16,8 @@ class PersonaBase(BaseModel):
     nombres: str = Field(alias="nombres", max_length=60)
     apellidos: str = Field(alias="apellidos", max_length=60)
     nombre_completo: str = Field(alias="nombreCompleto", max_length=120)
-    sexo: str = Field(alias="sexo", max_length=2)
+    # Optional: una persona juridica no tiene sexo (el formulario ya no lo pide en ese caso).
+    sexo: Optional[str] = Field(None, alias="sexo", max_length=2)
     fec_nacimiento: Optional[date] = Field(None, alias="fechaNacimiento")
     direccion: str = Field(alias="direccion", max_length=50)
     telefono: str = Field(alias="telefono", max_length=60)

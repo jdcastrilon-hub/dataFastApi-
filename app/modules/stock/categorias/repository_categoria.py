@@ -10,6 +10,12 @@ MAX_LOGS_AUDITORIA = 10
 # Codigo del numerador (por empresa) que identifica el consecutivo de cod_categoria
 CODIGO_NUMERADOR_CATEGORIA = "CATEGORIA"
 
+# Prefijo del numerador de subcategorias - NO es un codigo fijo: cada categoria
+# tiene su propio numerador independiente, con clave "SUBCATEGORIA_<id_categoria>"
+# (decision explicita 2026-08-07: la numeracion de subcategoria reinicia en 01
+# por cada categoria, no es un contador corrido para toda la empresa).
+CODIGO_NUMERADOR_SUBCATEGORIA = "SUBCATEGORIA"
+
 def _limitar_logs(logs):
     if not logs:
         return logs
@@ -25,6 +31,21 @@ def _obtener_cod_categoria(db: Session, id_emp: int, cod_categoria_manual):
     siguiente = repository_numerador.siguiente_numerador(db, id_emp, CODIGO_NUMERADOR_CATEGORIA)
     if siguiente is None:
         return cod_categoria_manual
+
+    return repository_numerador.formatear_numerador(siguiente, longitud=2)
+
+def _obtener_cod_subcategoria(db: Session, id_emp: int, categoria_id: int, cod_subcategoria_manual):
+    """
+    Asigna el codSubCategoria desde un numerador PROPIO de esa categoria (no
+    uno solo por empresa) - la clave real en md_numeradores es dinamica,
+    "SUBCATEGORIA_<categoria_id>", asi que cada categoria arranca su propia
+    serie 01,02,03... independiente de las demas. Solo se llama para
+    subcategorias nuevas; una ya existente nunca se renumera.
+    """
+    codigo_numerador = f"{CODIGO_NUMERADOR_SUBCATEGORIA}_{categoria_id}"
+    siguiente = repository_numerador.siguiente_numerador(db, id_emp, codigo_numerador)
+    if siguiente is None:
+        return cod_subcategoria_manual
 
     return repository_numerador.formatear_numerador(siguiente, longitud=2)
 
@@ -55,11 +76,12 @@ def create_categoria(db: Session, cat: schema_categoria.CategoriaCreate):
     db.add(db_categoria)
     db.flush() # Para obtener el ID de la categoria antes de insertar subcategorías
 
-    # 2. Crear las subcategorías vinculadas
+    # 2. Crear las subcategorías vinculadas (todas son nuevas: la categoria
+    # recien se creo, asi que db_categoria.id ya existe gracias al flush de arriba)
     for sub in cat.subcategorias:
         db_sub = models.Subcategoria(
             categoria_id=db_categoria.id,
-            cod_subcategoria=sub.cod_subcategoria,
+            cod_subcategoria=_obtener_cod_subcategoria(db, cat.id_emp, db_categoria.id, sub.cod_subcategoria),
             nom_subcategoria=sub.nom_subcategoria
         )
         db.add(db_sub)
@@ -90,12 +112,19 @@ def update_categoria(db: Session, id_categoria: int, obj : schema_categoria.Cate
         db.flush()
          
         for i,codigos in enumerate(obj.subcategorias, start=1):
+            # Solo las filas nuevas (id=0, ver sp_categorias_updatesubcategorias)
+            # piden numerador - una subcategoria ya existente nunca se renumera.
+            es_nueva = not codigos.id
+            cod_subcategoria = (
+                _obtener_cod_subcategoria(db, bd_categoria.id_emp, id_categoria, codigos.cod_subcategoria)
+                if es_nueva else codigos.cod_subcategoria
+            )
             db_codigos = models.SubcategoriaModel(
                 categoria_id=id_categoria,
                 id=codigos.id or 0,
                 linea=i, #Numerador de linea
-                cod_subcategoria=codigos.cod_subcategoria,
-                nom_subcategoria=codigos.nom_subcategoria,                
+                cod_subcategoria=cod_subcategoria,
+                nom_subcategoria=codigos.nom_subcategoria,
             )
             db.add(db_codigos)
         db.flush()
@@ -153,6 +182,25 @@ def delete_categoria(db: Session, id_categoria: int):
         # convierta en el mensaje de "registro en uso en otro módulo".
         db.rollback()
         raise
+
+# Combo de categorias activas de la empresa (usado por selects de otros
+# formularios, ej. Utilidad x Categoria).
+def get_categorias_combo(db: Session, id_emp: int):
+    return db.query(models.Categoria)\
+        .filter(models.Categoria.id_emp == id_emp, models.Categoria.estado == True)\
+        .order_by(models.Categoria.nom_categoria)\
+        .all()
+
+# Combo de subcategorias de UNA categoria puntual (cascada del combo anterior).
+# Se filtra tambien por id_emp via join a Categoria, aunque Subcategoria no
+# tenga la columna propia - mismo criterio que otras entidades sin id_emp
+# directo (ver m_bodegas).
+def get_subcategorias_combo(db: Session, id_categoria: int, id_emp: int):
+    return db.query(models.Subcategoria)\
+        .join(models.Categoria, models.Categoria.id == models.Subcategoria.categoria_id)\
+        .filter(models.Subcategoria.categoria_id == id_categoria, models.Categoria.id_emp == id_emp)\
+        .order_by(models.Subcategoria.nom_subcategoria)\
+        .all()
 
 #Paginacion
 def get_categorias_paginated(db: Session, page: int, size: int, id_emp: int, texto: str = None):
